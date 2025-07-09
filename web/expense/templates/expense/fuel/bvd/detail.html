@@ -1,0 +1,247 @@
+{% extends "layout/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% comment %}
+Fuel Expense (BVD) Detail Template
+Updated: Standardized UI to match Driver Payout design patterns
+{% endcomment %}
+
+{% block title %}Fuel Expense Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Fuel Expense Details</h1>
+        <div>
+            <a href="{% url 'fuel_expense_bvd_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+            <a href="{% url 'fuel_expense_bvd_update' bvd.id %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            {% if bvd.status == 'Pending' %}
+                <form method="post" action="{% url 'fuel_expense_bvd_delete' bvd.id %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this fuel expense record?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Fuel Expense Summary Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-gas-pump"></i> {{ bvd.driver.get_full_name|default:"Unknown Driver" }} - Fuel Expense Summary
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Date & Time:</strong><br>
+                    {{ bvd.date|date:'M d, Y H:i' }}
+                </div>
+                <div class="col-md-2">
+                    <strong>Status:</strong><br>
+                    <span class="badge bg-{% if bvd.status == 'Pending' %}warning{% elif bvd.status == 'Accounted' %}success{% elif bvd.status == 'Paid' %}info{% else %}secondary{% endif %}">
+                        {{ bvd.get_status_display }}
+                    </span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Card Number:</strong><br>
+                    {{ bvd.card_number }}
+                </div>
+                <div class="col-md-2">
+                    <strong>Unit Number:</strong><br>
+                    Unit {{ bvd.unit }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Total Amount:</strong><br>
+                    <h4 class="text-primary">${{ bvd.amount|floatformat:2 }} {{ bvd.currency }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fuel Summary -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <!-- Fuel Transaction Summary -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-gas-pump"></i> Fuel Transaction</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h6 class="text-success">Quantity</h6>
+                                <h4>{{ bvd.quantity|floatformat:2 }} {{ bvd.uom }}</h4>
+                                <small class="text-muted">PPU: ${{ bvd.billed_ppu|floatformat:4 }}</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-info">Pre-tax Amount</h6>
+                            <p class="mb-1">${{ bvd.pre_tax_amt|floatformat:2 }}</p>
+                            <p class="mb-1">Discount: ${{ bvd.discount|floatformat:2|default_if_none:"0.00" }}</p>
+                            <hr class="my-2">
+                            <h5 class="text-primary">Final: ${{ bvd.amount|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <!-- Tax Breakdown -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-percentage"></i> Tax Breakdown</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1">PST: ${{ bvd.pst|floatformat:2|default_if_none:"0.00" }}</p>
+                            <p class="mb-1">GST: ${{ bvd.gst|floatformat:2|default_if_none:"0.00" }}</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1">HST: ${{ bvd.hst|floatformat:2|default_if_none:"0.00" }}</p>
+                            <p class="mb-1">QST: ${{ bvd.qst|floatformat:2|default_if_none:"0.00" }}</p>
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    <h6 class="text-primary">Total Taxes: ${{ bvd.pst|add:bvd.gst|add:bvd.hst|add:bvd.qst|floatformat:2|default:"0.00" }}</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Information Tabs -->
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="detailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="transaction-tab" data-bs-toggle="tab" data-bs-target="#transaction" type="button" role="tab">
+                        <i class="fas fa-credit-card"></i> Transaction Details
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="location-tab" data-bs-toggle="tab" data-bs-target="#location" type="button" role="tab">
+                        <i class="fas fa-map-marker-alt"></i> Location Info
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="vehicle-tab" data-bs-toggle="tab" data-bs-target="#vehicle" type="button" role="tab">
+                        <i class="fas fa-truck"></i> Vehicle & Driver
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="detailTabsContent">
+                <!-- Transaction Details Tab -->
+                <div class="tab-pane fade show active" id="transaction" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <tbody>
+                                <tr>
+                                    <th width="30%">Date & Time:</th>
+                                    <td>{{ bvd.date|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Company:</th>
+                                    <td>{{ bvd.company_name|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Card Number:</th>
+                                    <td><code>{{ bvd.card_number }}</code></td>
+                                </tr>
+                                <tr>
+                                    <th>Authorization Code:</th>
+                                    <td>{{ bvd.auth_code|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Retail PPU:</th>
+                                    <td>${{ bvd.retail_ppu|floatformat:4 }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Billed PPU:</th>
+                                    <td>${{ bvd.billed_ppu|floatformat:4 }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Currency:</th>
+                                    <td><span class="badge bg-secondary">{{ bvd.currency }}</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Location Information Tab -->
+                <div class="tab-pane fade" id="location" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <tbody>
+                                <tr>
+                                    <th width="30%">Site Number:</th>
+                                    <td>{{ bvd.site_number|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Site Name:</th>
+                                    <td><strong>{{ bvd.site_name }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>City:</th>
+                                    <td>{{ bvd.site_city }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Province/State:</th>
+                                    <td>{{ bvd.prov_st }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Full Address:</th>
+                                    <td>{{ bvd.site_city }}, {{ bvd.prov_st }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Vehicle & Driver Tab -->
+                <div class="tab-pane fade" id="vehicle" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <tbody>
+                                <tr>
+                                    <th width="30%">Unit Number:</th>
+                                    <td><strong>Unit {{ bvd.unit }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Truck:</th>
+                                    <td>{{ bvd.truck.make|default:"" }} {{ bvd.truck.model|default:"" }} {{ bvd.truck.year|default:"" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Driver Name:</th>
+                                    <td><strong>{{ bvd.driver.get_full_name|default:"-" }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Driver Email:</th>
+                                    <td>{{ bvd.driver.email|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Odometer Reading:</th>
+                                    <td>{{ bvd.odometer|default_if_none:"-" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

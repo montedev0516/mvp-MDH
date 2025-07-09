@@ -1,0 +1,1136 @@
+{% extends "layout/base.html" %}
+{% load static %}
+{% load humanize %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+
+{% comment %}
+Fuel Expenses (BVD) List Template
+Updated: Standardized UI to match Driver Payout design patterns
+{% endcomment %}
+
+{% block title %}Fuel Expenses (BVD){% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Fuel Expenses (BVD)</h1>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBVDModal">
+                <i class="fas fa-plus"></i> Add Fuel Expense
+            </button>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importBVDModal">
+                <i class="fas fa-file-import"></i> Import BVD
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Records</h5>
+                    <h3 class="text-primary">{{ record_count|intcomma|default:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Quantity</h5>
+                    <h3 class="text-success">{{ total_quantity|floatformat:2|intcomma|default:0 }} L</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Amount</h5>
+                    <h3 class="text-info">${{ total_amount|floatformat:2|intcomma|default:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Status Summary</h5>
+                    <small>
+                        Pending: {{ pending_count|default:0 }} |
+                        Accounted: {{ accounted_count|default:0 }} |
+                        Paid: {{ paid_count|default:0 }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="q" class="form-control" value="{% if request.GET.q %}{{ request.GET.q }}{% endif %}" placeholder="Search...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{% if request.GET.start_date %}{{ request.GET.start_date }}{% endif %}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{% if request.GET.end_date %}{{ request.GET.end_date }}{% endif %}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Truck</label>
+                    <select name="truck" class="form-control">
+                        <option value="">All Trucks</option>
+                        {% for truck in trucks %}
+                            <option value="{{ truck.id }}"{% if truck.id == selected_truck %} selected{% endif %}>
+                                Unit {{ truck.unit }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-control">
+                        <option value="">All Statuses</option>
+                        <option value="Pending"{% if request.GET.status == 'Pending' %} selected{% endif %}>Pending</option>
+                        <option value="Accounted"{% if request.GET.status == 'Accounted' %} selected{% endif %}>Accounted</option>
+                        <option value="Paid"{% if request.GET.status == 'Paid' %} selected{% endif %}>Paid</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a href="{% url 'fuel_expense_bvd_list' %}" class="btn btn-secondary">Clear</a>
+                </div>
+            </form>
+            <div class="row mt-2">
+                <div class="col-md-2">
+                    <small class="text-muted">Search by card number, driver, or site.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="post" id="bulk-action-form">
+                {% csrf_token %}
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Action</label>
+                        <select name="action" class="form-control" id="id_action">
+                            <option value="">Select Action</option>
+                            <option value="mark_accounted">Mark as Accounted</option>
+                            <option value="mark_paid">Mark as Paid</option>
+                            <option value="export">Export to Excel</option>
+                            <option value="delete">Delete Selected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-warning" disabled id="bulk-submit">
+                            Apply to Selected
+                        </button>
+                    </div>
+                    <div class="col-md-7">
+                        <small class="text-muted">
+                            Select fuel expense records below and choose an action to perform on multiple records at once.
+                        </small>
+                    </div>
+                </div>
+                <input type="hidden" name="bvd_ids" id="id_bvd_ids" value="">
+            </form>
+        </div>
+    </div>
+
+    <!-- Fuel Expenses Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="select-all" class="form-check-input">
+                            </th>
+                            <th>Date</th>
+                            <th>Driver</th>
+                            <th>Unit #</th>
+                            <th>Site</th>
+                            <th>Quantity</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bvd in bvds %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="bvd_checkbox" value="{{ bvd.id }}" class="form-check-input bvd-checkbox">
+                                </td>
+                                <td>
+                                    <strong>{{ bvd.date|date:"M d, Y H:i" }}</strong>
+                                    <br><small class="text-muted">{{ bvd.card_number }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ bvd.driver.get_full_name|default:"-" }}</strong>
+                                    <br><small class="text-muted">{{ bvd.driver.email|default:"No email" }}</small>
+                                </td>
+                                <td>
+                                    Unit {{ bvd.unit }}
+                                    <br><small class="text-muted">{{ bvd.truck.make|default:"" }} {{ bvd.truck.model|default:"" }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ bvd.site_name }}</strong>
+                                    <br><small class="text-muted">{{ bvd.site_city }}, {{ bvd.prov_st }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ bvd.quantity|floatformat:2 }} {{ bvd.uom }}</strong>
+                                    <br><small class="text-muted">PPU: ${{ bvd.billed_ppu|floatformat:4 }}</small>
+                                </td>
+                                <td>
+                                    <strong>${{ bvd.amount|floatformat:2 }} {{ bvd.currency }}</strong>
+                                    <br><small class="text-muted">
+                                        Pre-tax: ${{ bvd.pre_tax_amt|floatformat:2 }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if bvd.status == 'Pending' %}warning{% elif bvd.status == 'Accounted' %}success{% elif bvd.status == 'Paid' %}info{% else %}secondary{% endif %}">
+                                        {{ bvd.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'fuel_expense_bvd_detail' bvd.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'fuel_expense_bvd_update' bvd.id %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if bvd.status == 'Pending' %}
+                                            <form method="post" action="{% url 'fuel_expense_bvd_delete' bvd.id %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this fuel expense record?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center">No fuel expense records found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <nav aria-label="Fuel expense pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in page_obj.paginator.page_range %}
+                            {% if page_num == page_obj.number %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_num }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add BVD Modal -->
+<div class="modal fade" id="addBVDModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Fuel Expense (BVD)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Left Column - Basic Information -->
+                        <div class="col-md-4">
+                            <h6 class="text-primary mb-3"><i class="fas fa-info-circle"></i> Basic Information</h6>
+                            {{ form.date|as_crispy_field }}
+                            {{ form.driver|as_crispy_field }}
+                            {{ form.truck|as_crispy_field }}
+                            {{ form.card_number|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Middle Column - Location & Fuel Details -->
+                        <div class="col-md-4">
+                            <h6 class="text-success mb-3"><i class="fas fa-gas-pump"></i> Fuel Details</h6>
+                            {{ form.site_name|as_crispy_field }}
+                            {{ form.site_city|as_crispy_field }}
+                            {{ form.quantity|as_crispy_field }}
+                            {{ form.uom|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Right Column - Pricing & Amount -->
+                        <div class="col-md-4">
+                            <h6 class="text-info mb-3"><i class="fas fa-dollar-sign"></i> Pricing</h6>
+                            {{ form.retail_ppu|as_crispy_field }}
+                            {{ form.billed_ppu|as_crispy_field }}
+                            {{ form.pre_tax_amt|as_crispy_field }}
+                            {{ form.amount|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="row">
+                        <!-- Tax Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-warning mb-3"><i class="fas fa-percentage"></i> Tax Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.pst|as_crispy_field }}
+                                    {{ form.gst|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.hst|as_crispy_field }}
+                                    {{ form.qst|as_crispy_field }}
+                                </div>
+                            </div>
+                            {{ form.discount|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Additional Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-secondary mb-3"><i class="fas fa-cog"></i> Additional Details</h6>
+                            {{ form.currency|as_crispy_field }}
+                            {{ form.status|as_crispy_field }}
+                            {{ form.odometer|as_crispy_field }}
+                            {{ form.auth_code|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Calculated Totals Display -->
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="alert alert-light border">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <strong class="text-success">Quantity</strong><br>
+                                        <span id="calc-quantity">0.00</span> <span id="calc-uom">L</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong class="text-info">Pre-tax Amount</strong><br>
+                                        $<span id="calc-pretax">0.00</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong class="text-warning">Total Taxes</strong><br>
+                                        $<span id="calc-taxes">0.00</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong class="text-primary">Final Amount</strong><br>
+                                        $<span id="calc-final">0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Fuel Expense
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import BVD Modal -->
+<div class="modal fade" id="importBVDModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import BVD File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="importBVDForm" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="bvd_file" class="form-label">Select BVD File</label>
+                        <input type="file" class="form-control" id="bvd_file" name="bvd_file" accept=".csv,.xlsx" required>
+                        <div class="form-text">
+                            Supported formats: CSV, Excel (.xlsx)
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Import Instructions:</strong>
+                        <ul>
+                            <li>File should contain columns: Date, Card Number, Driver, Unit, Site, Quantity, Amount</li>
+                            <li>Date format should be YYYY-MM-DD</li>
+                            <li>Existing records with same card number and date will be updated</li>
+                        </ul>
+                    </div>
+                    <!-- Progress indicator -->
+                    <div id="importProgress" class="d-none">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Processing file...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="importBVDBtn">Import BVD</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import Results Modal -->
+<div class="modal fade" id="importResultsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="importResultsContent">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="importResultsOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Bulk actions JavaScript for fuel expenses
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const bvdCheckboxes = document.querySelectorAll('.bvd-checkbox');
+    const bulkSubmit = document.getElementById('bulk-submit');
+    const bvdIdsInput = document.getElementById('id_bvd_ids');
+
+    function updateBulkActions() {
+        const selectedCheckboxes = document.querySelectorAll('.bvd-checkbox:checked');
+        const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+        
+        if (bulkSubmit) {
+            bulkSubmit.disabled = selectedIds.length === 0;
+        }
+        if (bvdIdsInput) {
+            bvdIdsInput.value = selectedIds.join(',');
+        }
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.indeterminate = selectedIds.length > 0 && selectedIds.length < bvdCheckboxes.length;
+            selectAllCheckbox.checked = selectedIds.length === bvdCheckboxes.length && bvdCheckboxes.length > 0;
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            bvdCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    bvdCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Import BVD Form AJAX handling
+    const importForm = document.getElementById('importBVDForm');
+    if (importForm) {
+        let isSubmitting = false; // Prevent double submissions
+        
+        importForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (isSubmitting) {
+                console.log('Import already in progress...');
+                return;
+            }
+            
+            const formData = new FormData(this);
+            const submitBtn = document.getElementById('importBVDBtn');
+            const progressDiv = document.getElementById('importProgress');
+            const fileInput = document.getElementById('bvd_file');
+            
+            // Validate file selection
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a file to upload.');
+                return;
+            }
+            
+            isSubmitting = true;
+            
+            // Show progress, disable button
+            if (progressDiv) progressDiv.classList.remove('d-none');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importing...';
+            }
+            
+            console.log('Starting BVD import...');
+            
+            // Submit via AJAX
+            fetch("{% url 'fuel_expense_bvd_import' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                console.log('Response URL:', response.url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.error('Response is not JSON:', contentType);
+                    throw new Error('Server returned non-JSON response. This might indicate a redirect or error page.');
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log('Import response received:', data); // Debug log
+                
+                isSubmitting = false;
+                
+                // Hide progress, re-enable button
+                if (progressDiv) progressDiv.classList.add('d-none');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Import BVD';
+                }
+                
+                // Reset form
+                importForm.reset();
+                
+                // Show results immediately for debugging
+                console.log('About to display results...');
+                displayImportResults(data);
+                
+                // Show results modal immediately to test
+                console.log('Attempting to show results modal...');
+                const resultsModal = document.getElementById('importResultsModal');
+                console.log('Results modal element:', resultsModal);
+                
+                if (resultsModal) {
+                    try {
+                        // Hide import modal first
+                        const importModal = bootstrap.Modal.getInstance(document.getElementById('importBVDModal'));
+                        if (importModal) {
+                            console.log('Hiding import modal...');
+                            importModal.hide();
+                        }
+                        
+                        // Show results modal after a brief delay
+                        setTimeout(() => {
+                            console.log('Creating and showing results modal...');
+                            try {
+                                const modal = new bootstrap.Modal(resultsModal);
+                                modal.show();
+                                console.log('Results modal should be visible now');
+                            } catch (modalError) {
+                                console.error('Error showing modal:', modalError);
+                                // Fallback: show results on page
+                                showResultsOnPage(data);
+                            }
+                        }, 500);
+                    } catch (error) {
+                        console.error('Error in modal handling:', error);
+                        // Fallback: show results on page
+                        showResultsOnPage(data);
+                    }
+                } else {
+                    console.error('Results modal element not found!');
+                    // Fallback: show results on page
+                    showResultsOnPage(data);
+                }
+                
+                // Also try the page-based fallback after a delay as backup
+                setTimeout(() => {
+                    showResultsOnPage(data);
+                }, 2000);
+            })
+            .catch(error => {
+                console.error('Import error:', error);
+                
+                isSubmitting = false;
+                
+                // Hide progress, re-enable button
+                if (progressDiv) progressDiv.classList.add('d-none');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Import BVD';
+                }
+                
+                // Show error in results modal instead of alert
+                displayImportResults({
+                    status: 'error',
+                    message: `An error occurred during import: ${error.message}. Please try again.`,
+                    total: 0,
+                    success: 0,
+                    errors: 1,
+                    skipped: 0
+                });
+                
+                // Also show on page as fallback
+                showResultsOnPage({
+                    status: 'error',
+                    message: `An error occurred during import: ${error.message}. Please try again.`,
+                    total: 0,
+                    success: 0,
+                    errors: 1,
+                    skipped: 0
+                });
+            });
+        });
+    }
+    
+    // Function to display import results
+    function displayImportResults(data) {
+        console.log('Displaying import results:', data); // Debug log
+        
+        const resultsContainer = document.getElementById('importResultsContent');
+        if (!resultsContainer) {
+            console.error('Results container not found!');
+            return;
+        }
+        
+        let html = '';
+        
+        if (data.status === 'success') {
+            html = `
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle"></i> Import Completed Successfully</h5>
+                    <p>${data.message}</p>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-success">${data.success || 0}</h5>
+                                <small>Records Imported</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-info">${data.processed || data.total || 0}</h5>
+                                <small>Records Processed</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-warning">${data.errors || 0}</h5>
+                                <small>Errors</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-muted">${data.skipped || 0}</h5>
+                                <small>Skipped</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (data.status === 'completed_with_errors' || data.status === 'completed_with_skips') {
+            const alertType = data.status === 'completed_with_errors' ? 'warning' : 'info';
+            const iconType = data.status === 'completed_with_errors' ? 'exclamation-triangle' : 'info-circle';
+            
+            html = `
+                <div class="alert alert-${alertType}">
+                    <h5><i class="fas fa-${iconType}"></i> Import Completed</h5>
+                    <p>${data.message}</p>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-success">${data.success || 0}</h5>
+                                <small>Records Imported</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-info">${data.processed || data.total || 0}</h5>
+                                <small>Records Processed</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-danger">${data.errors || 0}</h5>
+                                <small>Errors</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="text-warning">${data.skipped || 0}</h5>
+                                <small>Skipped</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add error details if available
+            if (data.error_details && data.error_details.length > 0) {
+                html += `
+                    <div class="mt-3">
+                        <h6>Error Details (showing first 5):</h6>
+                        <ul class="list-group">
+                `;
+                data.error_details.forEach(error => {
+                    html += `<li class="list-group-item list-group-item-danger"><small>${error}</small></li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            // Add skipped details if available
+            if (data.skipped_details && data.skipped_details.length > 0) {
+                html += `
+                    <div class="mt-3">
+                        <h6>Skipped Records (showing first 5):</h6>
+                        <ul class="list-group">
+                `;
+                data.skipped_details.forEach(skip => {
+                    html += `<li class="list-group-item list-group-item-warning"><small>${skip}</small></li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            // Add summary of skipped units
+            if (data.skipped_units) {
+                const skippedSummary = [];
+                if (data.skipped_units.missing_truck && data.skipped_units.missing_truck.length > 0) {
+                    skippedSummary.push(`Missing trucks: ${data.skipped_units.missing_truck.length} units (${data.skipped_units.missing_truck.join(', ')})`);
+                }
+                if (data.skipped_units.no_assignment && data.skipped_units.no_assignment.length > 0) {
+                    skippedSummary.push(`No assignments: ${data.skipped_units.no_assignment.length} units (${data.skipped_units.no_assignment.join(', ')})`);
+                }
+                if (data.skipped_units.cancelled_assignment && data.skipped_units.cancelled_assignment.length > 0) {
+                    skippedSummary.push(`Cancelled assignments: ${data.skipped_units.cancelled_assignment.length} units (${data.skipped_units.cancelled_assignment.join(', ')})`);
+                }
+                
+                if (skippedSummary.length > 0) {
+                    html += `
+                        <div class="mt-3">
+                            <h6>Skip Summary:</h6>
+                            <div class="alert alert-light">
+                                ${skippedSummary.map(summary => `<div><small>${summary}</small></div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            html = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-times-circle"></i> Import Failed</h5>
+                    <p>${data.message || 'An error occurred during import.'}</p>
+                </div>
+            `;
+        }
+        
+        console.log('Setting results HTML:', html); // Debug log
+        resultsContainer.innerHTML = html;
+    }
+
+    // Handle results modal OK button
+    const importResultsOkBtn = document.getElementById('importResultsOkBtn');
+    if (importResultsOkBtn) {
+        importResultsOkBtn.addEventListener('click', function() {
+            console.log('Results OK button clicked, refreshing page...');
+            
+            // Add a small delay to show user we're refreshing
+            const btn = this;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Refreshing...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        });
+    }
+
+    // Test function to verify modal structure
+    function testModalStructure() {
+        console.log('Testing modal structure...');
+        console.log('Import modal:', document.getElementById('importBVDModal'));
+        console.log('Results modal:', document.getElementById('importResultsModal'));
+        console.log('Results content:', document.getElementById('importResultsContent'));
+        console.log('OK button:', document.getElementById('importResultsOkBtn'));
+        
+        // Log Bootstrap version for debugging
+        console.log('Bootstrap version:', typeof bootstrap !== 'undefined' ? 'Loaded' : 'Not loaded');
+        
+        // Test if we can create a modal instance
+        try {
+            const testModal = document.getElementById('importResultsModal');
+            if (testModal) {
+                const modalInstance = new bootstrap.Modal(testModal);
+                console.log('Modal instance created successfully:', modalInstance);
+            }
+        } catch (error) {
+            console.error('Error creating modal instance:', error);
+        }
+    }
+    
+    // Call test function after page load
+    setTimeout(testModalStructure, 1000);
+    
+    // Add a direct test button in console to test modal
+    window.testModal = function() {
+        console.log('Testing modal display directly...');
+        const modal = document.getElementById('importResultsModal');
+        if (modal) {
+            try {
+                const instance = new bootstrap.Modal(modal);
+                
+                // Set test content
+                document.getElementById('importResultsContent').innerHTML = `
+                    <div class="alert alert-success">
+                        <h5>Test Modal</h5>
+                        <p>This is a test to see if the modal displays correctly.</p>
+                    </div>
+                `;
+                
+                instance.show();
+                console.log('Test modal should be visible');
+            } catch (error) {
+                console.error('Error in test modal:', error);
+            }
+        } else {
+            console.error('Modal element not found for testing');
+        }
+    };
+    
+    // Add a simple test button for debugging (remove in production)
+    window.testImportResults = function() {
+        displayImportResults({
+            status: 'success',
+            message: 'Test import completed successfully!',
+            total: 10,
+            processed: 10,
+            success: 8,
+            errors: 1,
+            skipped: 1,
+            error_details: ['Row 5: Invalid date format'],
+            skipped_details: ['Row 7: Missing truck for unit 123']
+        });
+        
+        // Also try to show the modal
+        setTimeout(() => {
+            window.testModal();
+        }, 100);
+    };
+
+    // Add a comprehensive test with your exact data
+    window.testWithYourData = function() {
+        console.log('Testing with your exact response data...');
+        
+        const yourData = {
+            "status": "completed_with_errors",
+            "total": 9,
+            "processed": 9,
+            "success": 2,
+            "errors": 1,
+            "skipped": 6,
+            "error_details": [
+                "Row 1: ['Error processing driver assignment for truck 3001']"
+            ],
+            "skipped_details": [
+                "Row 4: Missing truck for unit 33",
+                "Row 5: Missing truck for unit 33",
+                "Row 6: Missing truck for unit 4001",
+                "Row 7: Missing truck for unit 6001",
+                "Row 9: Missing truck for unit 7001"
+            ],
+            "skipped_units": {
+                "missing_truck": ["33", "4001", "6001", "7001"],
+                "no_assignment": [],
+                "cancelled_assignment": [],
+                "other": []
+            },
+            "message": "Import completed: 2 records imported successfully. 1 records had errors, 6 records were skipped."
+        };
+        
+        console.log('Displaying results with your data...');
+        displayImportResults(yourData);
+        
+        console.log('Showing page banner...');
+        showResultsOnPage(yourData);
+        
+        console.log('Attempting modal display...');
+        setTimeout(() => {
+            try {
+                const modal = document.getElementById('importResultsModal');
+                if (modal) {
+                    const instance = new bootstrap.Modal(modal);
+                    instance.show();
+                    console.log('Modal should be visible with your data');
+                } else {
+                    console.error('Modal not found');
+                }
+            } catch (error) {
+                console.error('Modal error:', error);
+            }
+        }, 500);
+    };
+
+    // BVD Form Enhancement
+    const modal = document.getElementById('addBVDModal');
+    if (modal) {
+        modal.addEventListener('shown.bs.modal', function() {
+            // Initialize date field with current date/time
+            const dateField = document.getElementById('id_date');
+            if (dateField && !dateField.value) {
+                const now = new Date();
+                dateField.value = now.toISOString().slice(0, 16);
+            }
+            
+            // Set default values
+            const uomField = document.getElementById('id_uom');
+            if (uomField && !uomField.value) {
+                uomField.value = 'L';
+            }
+            
+            const currencyField = document.getElementById('id_currency');
+            if (currencyField && !currencyField.value) {
+                currencyField.value = 'CAD';
+            }
+            
+            const statusField = document.getElementById('id_status');
+            if (statusField && !statusField.value) {
+                statusField.value = 'Pending';
+            }
+            
+            // Trigger initial calculation
+            updateCalculations();
+        });
+    }
+
+    // Real-time calculation functions
+    function updateCalculations() {
+        const quantity = parseFloat(document.getElementById('id_quantity')?.value) || 0;
+        const retailPPU = parseFloat(document.getElementById('id_retail_ppu')?.value) || 0;
+        const billedPPU = parseFloat(document.getElementById('id_billed_ppu')?.value) || 0;
+        const preTaxAmt = parseFloat(document.getElementById('id_pre_tax_amt')?.value) || 0;
+        const pst = parseFloat(document.getElementById('id_pst')?.value) || 0;
+        const gst = parseFloat(document.getElementById('id_gst')?.value) || 0;
+        const hst = parseFloat(document.getElementById('id_hst')?.value) || 0;
+        const qst = parseFloat(document.getElementById('id_qst')?.value) || 0;
+        const discount = parseFloat(document.getElementById('id_discount')?.value) || 0;
+        const uom = document.getElementById('id_uom')?.value || 'L';
+        
+        // Calculate pre-tax amount if not manually entered
+        let calculatedPreTax = preTaxAmt;
+        if (quantity > 0 && !preTaxAmt) {
+            if (billedPPU > 0) {
+                calculatedPreTax = quantity * billedPPU;
+                const preTaxField = document.getElementById('id_pre_tax_amt');
+                if (preTaxField) {
+                    preTaxField.value = calculatedPreTax.toFixed(2);
+                }
+            } else if (retailPPU > 0) {
+                calculatedPreTax = quantity * retailPPU;
+                const preTaxField = document.getElementById('id_pre_tax_amt');
+                if (preTaxField) {
+                    preTaxField.value = calculatedPreTax.toFixed(2);
+                }
+            }
+        }
+        
+        // Calculate total taxes
+        const totalTaxes = pst + gst + hst + qst;
+        
+        // Calculate final amount
+        const finalAmount = calculatedPreTax + totalTaxes - discount;
+        
+        // Update amount field
+        const amountField = document.getElementById('id_amount');
+        if (amountField) {
+            amountField.value = finalAmount.toFixed(2);
+        }
+        
+        // Update display calculations
+        document.getElementById('calc-quantity').textContent = quantity.toFixed(2);
+        document.getElementById('calc-uom').textContent = uom;
+        document.getElementById('calc-pretax').textContent = calculatedPreTax.toFixed(2);
+        document.getElementById('calc-taxes').textContent = totalTaxes.toFixed(2);
+        document.getElementById('calc-final').textContent = finalAmount.toFixed(2);
+    }
+
+    // Handle truck selection to auto-fill unit number
+    const truckSelect = document.getElementById('id_truck');
+    if (truckSelect) {
+        truckSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.text) {
+                // Extract unit number from truck option text (assuming format like "Unit 123 - Make Model")
+                const unitMatch = selectedOption.text.match(/Unit\s+(\d+)/i);
+                if (unitMatch) {
+                    const unitField = document.getElementById('id_unit');
+                    if (unitField) {
+                        unitField.value = unitMatch[1];
+                    }
+                }
+            }
+        });
+    }
+
+    // Add event listeners for auto-calculation
+    const calcFields = [
+        'id_quantity', 'id_retail_ppu', 'id_billed_ppu', 'id_pre_tax_amt', 
+        'id_pst', 'id_gst', 'id_hst', 'id_qst', 'id_discount', 'id_uom'
+    ];
+    
+    calcFields.forEach(fieldId => {
+        const element = document.getElementById(fieldId);
+        if (element) {
+            element.addEventListener('input', updateCalculations);
+            element.addEventListener('change', updateCalculations);
+        }
+    });
+
+    // Alternative function to display results directly on page if modal fails
+    function showResultsOnPage(data) {
+        console.log('Showing results directly on page as fallback...');
+        
+        // Create results HTML
+        const resultsHtml = `
+            <div id="import-results-banner" class="alert alert-info alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 500px;">
+                <h5><i class="fas fa-info-circle"></i> Import Results</h5>
+                <p><strong>${data.message}</strong></p>
+                <div class="row text-center mt-3">
+                    <div class="col-3"><strong>${data.success || 0}</strong><br><small>Success</small></div>
+                    <div class="col-3"><strong>${data.errors || 0}</strong><br><small>Errors</small></div>
+                    <div class="col-3"><strong>${data.skipped || 0}</strong><br><small>Skipped</small></div>
+                    <div class="col-3"><strong>${data.total || 0}</strong><br><small>Total</small></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <hr>
+                <button type="button" class="btn btn-primary btn-sm" onclick="location.reload()">Refresh Page</button>
+            </div>
+        `;
+        
+        // Remove any existing banner
+        const existingBanner = document.getElementById('import-results-banner');
+        if (existingBanner) {
+            existingBanner.remove();
+        }
+        
+        // Add to page
+        document.body.insertAdjacentHTML('beforeend', resultsHtml);
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            const banner = document.getElementById('import-results-banner');
+            if (banner) {
+                banner.remove();
+            }
+        }, 10000);
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modal-xl {
+        max-width: 1200px;
+    }
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .card-header {
+        padding: 0.75rem 1rem;
+        border-bottom: none;
+    }
+    .card-body {
+        padding: 1rem;
+    }
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+        color: #495057;
+    }
+    .form-control {
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid #ced4da;
+    }
+    .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .modal-header {
+        border-bottom: none;
+    }
+    .modal-footer {
+        border-top: none;
+        padding: 1rem;
+    }
+</style>
+{% endblock %}

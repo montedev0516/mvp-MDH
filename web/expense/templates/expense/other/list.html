@@ -1,0 +1,388 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% comment %}
+Other Expenses (Non-Fuel) List Template
+Updated: Standardized UI to match Driver Payout design patterns
+{% endcomment %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Other Expenses (Non-Fuel)</h1>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                <i class="fas fa-plus"></i> Add Expense
+            </button>
+            <!-- <a href="{% url 'other_expense_export' %}" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export to Excel
+            </a> -->
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Records</h5>
+                    <h3 class="text-primary">{{ record_count|default:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">CAD Amount</h5>
+                    <h3 class="text-success">${{ cad_total|floatformat:2|default:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">USD Amount</h5>
+                    <h3 class="text-info">${{ usd_total|floatformat:2|default:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Status Summary</h5>
+                    <small>
+                        Pending: {{ pending_count|default:0 }} |
+                        Approved: {{ approved_count|default:0 }} |
+                        Reimbursed: {{ reimbursed_count|default:0 }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="q" class="form-control" value="{% if request.GET.q %}{{ request.GET.q }}{% endif %}" placeholder="Search...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{% if request.GET.start_date %}{{ request.GET.start_date }}{% endif %}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{% if request.GET.end_date %}{{ request.GET.end_date }}{% endif %}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-control">
+                        <option value="">All Categories</option>
+                        {% for value, label in form.fields.category.choices %}
+                            <option value="{{ value }}"{% if value == selected_category %} selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-control">
+                        <option value="">All Statuses</option>
+                        {% for value, label in form.fields.status.choices %}
+                            <option value="{{ value }}"{% if value == selected_status %} selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a href="{% url 'other_expense_list' %}" class="btn btn-secondary">Clear</a>
+                </div>
+            </form>
+            <div class="row mt-2">
+                <div class="col-md-2">
+                    <small class="text-muted">Search by name, vendor, or driver.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="post" id="bulk-action-form">
+                {% csrf_token %}
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Action</label>
+                        <select name="action" class="form-control" id="id_action">
+                            <option value="">Select Action</option>
+                            <option value="mark_approved">Mark as Approved</option>
+                            <option value="mark_reimbursed">Mark as Reimbursed</option>
+                            <option value="export">Export to Excel</option>
+                            <option value="delete">Delete Selected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-warning" disabled id="bulk-submit">
+                            Apply to Selected
+                        </button>
+                    </div>
+                    <div class="col-md-7">
+                        <small class="text-muted">
+                            Select expense records below and choose an action to perform on multiple records at once.
+                        </small>
+                    </div>
+                </div>
+                <input type="hidden" name="expense_ids" id="id_expense_ids" value="">
+            </form>
+        </div>
+    </div>
+
+    <!-- Other Expenses Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="select-all" class="form-check-input">
+                            </th>
+                            <th>Date</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Driver</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="expense_checkbox" value="{{ expense.id }}" class="form-check-input expense-checkbox">
+                                </td>
+                                <td>
+                                    <strong>{{ expense.date|date:'M d, Y H:i' }}</strong>
+                                    <br><small class="text-muted">{{ expense.receipt_number|default:"No receipt #" }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ expense.name }}</strong>
+                                    <br><small class="text-muted">{{ expense.vendor_name|default:"No vendor" }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ expense.get_category_display }}</span>
+                                    <br><small class="text-muted">{{ expense.payment_method|default:"N/A" }}</small>
+                                </td>
+                                <td>
+                                    <strong>${{ expense.amount|floatformat:2 }} {{ expense.currency }}</strong>
+                                    {% if expense.tax_amount %}
+                                        <br><small class="text-muted">
+                                            Tax: ${{ expense.tax_amount|floatformat:2 }} ({{ expense.get_tax_type_display }})
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if expense.status == 'Pending' %}warning{% elif expense.status == 'Approved' %}success{% elif expense.status == 'Reimbursed' %}info{% else %}secondary{% endif %}">
+                                        {{ expense.get_status_display }}
+                                    </span>
+                                    {% if expense.reimbursement_status %}
+                                        <br><small class="badge bg-{% if expense.reimbursement_status == 'Pending' %}warning{% elif expense.reimbursement_status == 'Completed' %}success{% else %}secondary{% endif %} mt-1">
+                                            {{ expense.get_reimbursement_status_display }}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ expense.driver|default:"-" }}</strong>
+                                    {% if expense.truck %}
+                                        <br><small class="text-muted">Unit {{ expense.truck }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'other_expense_detail' expense.pk %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'other_expense_update' expense.pk %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if expense.status == 'Pending' %}
+                                            <form method="post" action="{% url 'other_expense_delete' expense.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this expense record?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center">No expenses found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <nav aria-label="Other expense pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in page_obj.paginator.page_range %}
+                            {% if page_num == page_obj.number %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_num }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Other Expense</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Left Column - Basic Information -->
+                        <div class="col-md-4">
+                            <h6 class="text-primary mb-3"><i class="fas fa-info-circle"></i> Basic Information</h6>
+                            {{ form.date|as_crispy_field }}
+                            {{ form.name|as_crispy_field }}
+                            {{ form.category|as_crispy_field }}
+                            {{ form.description|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Middle Column - Financial Information -->
+                        <div class="col-md-4">
+                            <h6 class="text-success mb-3"><i class="fas fa-dollar-sign"></i> Financial Details</h6>
+                            {{ form.amount|as_crispy_field }}
+                            {{ form.currency|as_crispy_field }}
+                            {{ form.tax_amount|as_crispy_field }}
+                            {{ form.tax_type|as_crispy_field }}
+                            {{ form.payment_method|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Right Column - Additional Details -->
+                        <div class="col-md-4">
+                            <h6 class="text-info mb-3"><i class="fas fa-cog"></i> Additional Details</h6>
+                            {{ form.driver|as_crispy_field }}
+                            {{ form.truck|as_crispy_field }}
+                            {{ form.status|as_crispy_field }}
+                            {{ form.reimbursement_status|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="row">
+                        <!-- Vendor Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-warning mb-3"><i class="fas fa-store"></i> Vendor Information</h6>
+                            {{ form.vendor_name|as_crispy_field }}
+                            {{ form.vendor_location|as_crispy_field }}
+                            {{ form.receipt_number|as_crispy_field }}
+                            {{ form.payment_reference|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Receipt & Notes -->
+                        <div class="col-md-6">
+                            <h6 class="text-secondary mb-3"><i class="fas fa-file-alt"></i> Documentation</h6>
+                            {{ form.receipt_image|as_crispy_field }}
+                            {{ form.is_reimbursable|as_crispy_field }}
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Expense
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Bulk actions JavaScript for other expenses
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const expenseCheckboxes = document.querySelectorAll('.expense-checkbox');
+    const bulkSubmit = document.getElementById('bulk-submit');
+    const expenseIdsInput = document.getElementById('id_expense_ids');
+
+    function updateBulkActions() {
+        const selectedCheckboxes = document.querySelectorAll('.expense-checkbox:checked');
+        const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+        
+        if (bulkSubmit) {
+            bulkSubmit.disabled = selectedIds.length === 0;
+        }
+        if (expenseIdsInput) {
+            expenseIdsInput.value = selectedIds.join(',');
+        }
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.indeterminate = selectedIds.length > 0 && selectedIds.length < expenseCheckboxes.length;
+            selectAllCheckbox.checked = selectedIds.length === expenseCheckboxes.length && expenseCheckboxes.length > 0;
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            expenseCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    expenseCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Remove old confirmDelete function as we now use inline forms
+});
+</script>
+
+{% endblock %}

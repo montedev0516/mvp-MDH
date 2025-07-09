@@ -1,0 +1,130 @@
+{# templates/user_management/user_list.html #}
+{% extends "layout/base.html" %}
+{% load django_tables2 %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>User Management</h2>
+        <a href="{% url 'tenant:onboarding' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Organization & User
+        </a>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="tenant" class="form-label">Filter by Tenant</label>
+                    <select name="tenant" id="tenant" class="form-select">
+                        <option value="">All Tenants</option>
+                        {% for tenant in tenants %}
+                        <option value="{{ tenant.id }}" {% if selected_tenant == tenant.id|stringformat:"s" %}selected{% endif %}>
+                            {{ tenant.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search Users</label>
+                    <input type="text" name="search" id="search" class="form-control"
+                           placeholder="Search by username, email, or name"
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <a href="{% url 'tenant:user_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="card">
+        <div class="card-body">
+            {% if table.data %}
+                <div class="table-responsive">
+                    {% render_table table %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    {% if search_query or selected_tenant %}
+                        No users found matching your search criteria.
+                    {% else %}
+                        No users have been created yet.
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deactivation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to deactivate this user?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Deactivate</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Delete user functionality
+    let deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    let userId = null;
+
+    document.querySelectorAll('.delete-user').forEach(button => {
+        button.addEventListener('click', function() {
+            userId = this.dataset.id;
+            deleteModal.show();
+        });
+    });
+
+    document.getElementById('confirmDelete').addEventListener('click', function() {
+        if (userId) {
+            fetch(`/user-management/users/${userId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        }
+        deleteModal.hide();
+    });
+
+    // Auto-submit form when tenant filter changes
+    document.getElementById('tenant').addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
+{% endblock %}

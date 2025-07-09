@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI-Powered TMS Landing Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#224ed8",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-XKZPQ6HT6J"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-XKZPQ6HT6J");
+    </script>
+  </head>
+  <body class="font-sans text-primary bg-white">
+    <header class="bg-primary text-white text-center py-8">
+      <h1 class="text-4xl font-bold">AI-Powered TMS Solution</h1>
+      <p class="text-xl font-semibold mt-4">
+        Make every dispatch a walk in the park
+      </p>
+    </header>
+    <main class="max-w-3xl mx-auto px-4 py-8">
+      <h2 class="text-2xl font-bold text-primary mb-4">
+        Revolutionize Your Transportation Management
+      </h2>
+      <p class="mb-8">
+        Our AI-powered Transportation Management System (TMS) application
+        simplifies your dispatch process, making it as easy as a walk in the
+        park. Streamline your operations, reduce costs, and improve efficiency
+        with our cutting-edge solution.
+      </p>
+      <button
+        id="joinButton"
+        class="block w-48 mx-auto py-4 px-6 bg-primary text-white text-center text-lg font-semibold rounded hover:bg-blue-700 transition duration-300"
+        onclick="showForm()"
+      >
+        Join the wait-list
+      </button>
+      <div id="formContainer" class="mt-8 hidden">
+        <iframe
+          src="https://docs.google.com/forms/d/e/1FAIpQLSctg16WaQeJGSa-v4x0gt1BvRZN4eTsv0UH6dmVrh7p4r-FJg/viewform?embedded=true"
+          class="w-full h-[500px] border-0"
+          frameborder="0"
+          marginheight="0"
+          marginwidth="0"
+          >Loading…</iframe
+        >
+      </div>
+    </main>
+    <script>
+      function showForm() {
+        document.getElementById("formContainer").classList.remove("hidden");
+        document.getElementById("joinButton").classList.add("hidden");
+      }
+    </script>
+  </body>
+</html>

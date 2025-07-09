@@ -1,0 +1,46 @@
+{% extends 'layout/base.html' %}
+{% load django_tables2 %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+  <div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3">Subscription Plans</h1>
+      <a href="{% url 'subscriptions:plan_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>Create New Plan</a>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Total Active Subscriptions</h5>
+            <h2 class="card-text">{{ total_subscriptions }}</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        {% render_table table %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    /* Light mode styles */
+    [data-bs-theme='light'] .table {
+      color: #212529;
+    }
+
+    /* Dark mode styles */
+    [data-bs-theme='dark'] .table {
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] .table-striped > tbody > tr:nth-of-type(odd) > * {
+      color: #e9ecef;
+    }
+  </style>
+{% endblock %}

@@ -1,0 +1,21 @@
+[Unit]
+Description=Gunicorn instance to serve MDH Web app
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/mdh/web
+ExecStart=/home/ubuntu/mdh/web/.venv/bin/gunicorn -w 4 mdh.wsgi
+Restart=always
+EnvironmentFile=/home/ubuntu/mdh/web/.env
+
+# CPU limit - restrict to 1 CPU core
+CPUQuota=100%
+
+# Memory limit - restrict to 1GB
+MemoryMax=1G
+MemorySwapMax=1G
+
+[Install]
+WantedBy=multi-user.target

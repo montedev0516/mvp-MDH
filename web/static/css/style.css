@@ -1,0 +1,32 @@
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loader-content {
+  text-align: center;
+  padding: 20px;
+  border-radius: 8px;
+}
+.container-fluid {
+  padding-left: 2rem; /* Add some padding on the sides */
+  padding-right: 2rem;
+}
+
+/* Optional: Add a max-width if you don't want it to stretch too wide on very large screens */
+@media (min-width: 1400px) {
+  .container-fluid {
+    max-width: 1800px; /* Or any other max-width you prefer */
+    margin: 0 auto;
+  }
+}
+
+

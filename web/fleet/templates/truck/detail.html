@@ -1,0 +1,281 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- Messages/Alerts -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Header section with actions -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Truck Details: {{ truck.unit }}</h2>
+    <div class="btn-group">
+      <a href="{% url 'fleet:truck-update' truck.id %}" class="btn btn-primary">
+        <i class="fas fa-edit me-1"></i> Edit Truck
+      </a>
+      <a href="{% url 'fleet:truck-list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <!-- Truck status banner -->
+  <div class="card mb-4">
+    <div class="card-body bg-light">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">{{ truck.make }} {{ truck.model }} ({{ truck.year|default:'N/A' }})</h2>
+        <span class="badge {% if truck.status == 'active' %}bg-success{% else %}bg-secondary{% endif %} p-2">
+          {% if truck.status == 'active' %}Active{% else %}Inactive{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Basic Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Basic Information</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">Unit Number:</th>
+              <td>{{ truck.unit }}</td>
+            </tr>
+            <tr>
+              <th>VIN:</th>
+              <td>{{ truck.vin|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>Make:</th>
+              <td>{{ truck.make }}</td>
+            </tr>
+            <tr>
+              <th>Model:</th>
+              <td>{{ truck.model }}</td>
+            </tr>
+            <tr>
+              <th>Year:</th>
+              <td>{{ truck.year|default:'—' }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ownership Details -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-file-contract me-2"></i>Ownership Details</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">Carrier:</th>
+              <td>{{ truck.carrier|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>Ownership Type:</th>
+              <td>{{ truck.get_ownership_type_display|default:'—' }}</td>
+            </tr>
+            {% if truck.ownership_type == 'leased' %}
+              <tr>
+                <th>Lease Start Date:</th>
+                <td>{{ truck.lease_start_date|date:"F d, Y"|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>Lease End Date:</th>
+                <td>{{ truck.lease_end_date|date:"F d, Y"|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>Lease Rate:</th>
+                <td>{{ truck.lease_rate|default:'—' }}</td>
+              </tr>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Registration Details -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Registration Details</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">License Plate:</th>
+              <td>{{ truck.plate|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>Registration State:</th>
+              <td>{{ truck.registration|default:'—' }}</td>
+            </tr>
+            <!-- <tr>
+              <th>Registration Expiry:</th>
+              <td>
+                {{ truck.registration_expiry|date:"F d, Y"|default:'—' }}
+                {% if truck.registration_expiry %}
+                  {% if truck.registration_expiry < now %}
+                    <span class="badge bg-danger ms-2">Expired</span>
+                  {% else %}
+                    <span class="badge bg-success ms-2">Valid</span>
+                  {% endif %}
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <th>DOT Number:</th>
+              <td>{{ truck.dot_number|default:'—' }}</td>
+            </tr> -->
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Technical Details -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Technical Details</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">Weight:</th>
+              <td>{{ truck.weight|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>Capacity:</th>
+              <td>{{ truck.capacity|default:'—' }}</td>
+            </tr>
+            <!-- <tr>
+              <th>Fuel Type:</th>
+              <td>{{ truck.fuel_type|default:'—' }}</td>
+            </tr> -->
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Assignment -->
+    {% if active_assignments %}
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Current Assignment</h5>
+          </div>
+          <div class="card-body">
+            {% for assignment in active_assignments %}
+              <table class="table table-borderless">
+                <tr>
+                  <th style="width: 40%">Driver:</th>
+                  <td>
+                    <a href="{% url 'fleet:driver-detail' assignment.driver.id %}">
+                      {{ assignment.driver.first_name }} {{ assignment.driver.last_name }}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Start Date:</th>
+                  <td>{{ assignment.start_date|date:"F d, Y" }}</td>
+                </tr>
+                <tr>
+                  <th>End Date:</th>
+                  <td>{{ assignment.end_date|date:"F d, Y"|default:'—' }}</td>
+                </tr>
+                <tr>
+                  <th>Duty Status:</th>
+                  <td>
+                    {% if assignment.truck.duty_status == 'on_duty' %}
+                      <span class="badge bg-success">On Duty</span>
+                    {% elif assignment.truck.duty_status == 'available' %}
+                      <span class="badge bg-secondary">Available</span>
+                    {% elif assignment.truck.duty_status == 'off_duty' %}
+                      <span class="badge bg-warning">Off Duty</span>
+                    {% else %}
+                      <span class="badge bg-warning">Other</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              </table>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Action buttons at bottom -->
+  <div class="d-flex gap-2 mb-4">
+    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTruckModal">
+      <i class="fas fa-trash me-1"></i> Delete Truck
+    </button>
+  </div>
+
+  <!-- Delete Modal -->
+  <div class="modal fade" id="deleteTruckModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Deletion</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete truck <strong>{{ truck.unit }}</strong>?</p>
+          <p class="text-danger">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <form action="{% url 'fleet:truck-delete' truck.id %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+}
+
+.table td {
+  color: #212529;
+}
+
+.fa-truck {
+  color: #6c757d;
+}
+</style>
+{% endblock %}

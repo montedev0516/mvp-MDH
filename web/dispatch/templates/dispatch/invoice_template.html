@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Invoice {{ invoice_number }}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm;
+        @bottom-right {
+          content: 'Page ' counter(page) ' of ' counter(pages);
+          font-size: 10px;
+          padding: 10px;
+        }
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #333;
+        position: relative;
+      }
+
+      .header {
+        width: 100%;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #333;
+        padding-bottom: 20px;
+      }
+
+      .header:after {
+        content: '';
+        display: table;
+        clear: both;
+      }
+
+      .company-details {
+        float: left;
+        width: 50%;
+      }
+
+      .logo {
+        margin-bottom: 15px;
+      }
+
+      .logo img {
+        max-width: 200px;
+        height: auto;
+      }
+
+      .invoice-info {
+        float: right;
+        width: 40%;
+        text-align: right;
+        border: 2px solid #333;
+        padding: 15px;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+      }
+
+      h1 {
+        font-size: 24px;
+        margin: 0 0 10px 0;
+        color: #000;
+      }
+
+      h2 {
+        font-size: 18px;
+        margin: 0 0 10px 0;
+        color: #000;
+      }
+
+      h3 {
+        font-size: 16px;
+        margin: 0 0 10px 0;
+      }
+
+      h4 {
+        font-size: 14px;
+        margin: 0 0 10px 0;
+      }
+
+      .section {
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+      }
+
+      .section-title {
+        background-color: #f0f0f0;
+        padding: 10px;
+        margin-bottom: 10px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        text-transform: uppercase;
+        font-size: 12px;
+        color: #333;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 11px;
+        color: #333;
+      }
+
+      tbody tr:nth-child(even) {
+        background-color: #fafafa;
+      }
+
+      .trip {
+        border: 1px solid #ddd;
+        margin-bottom: 15px;
+        page-break-inside: avoid;
+        background-color: #fff;
+      }
+
+      .trip-header {
+        background-color: #f0f0f0;
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 11px;
+      }
+
+      .trip-content {
+        padding: 15px;
+      }
+
+      .trip-grid {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .trip-grid td {
+        padding: 4px;
+        border: none;
+        vertical-align: top;
+      }
+
+      .info-box {
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 3px;
+      }
+
+      .totals {
+        width: 300px;
+        float: right;
+        border: 2px solid #333;
+        margin-left: auto;
+        background-color: #f9f9f9;
+      }
+
+      .totals th,
+      .totals td {
+        padding: 12px;
+        font-weight: bold;
+      }
+
+      .label {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+
+      .footer-info {
+        margin-top: 40px;
+        font-size: 11px;
+        color: #666;
+        border-top: 1px solid #ddd;
+        padding-top: 20px;
+      }
+
+      .payment-info,
+      .bank-details {
+        margin-bottom: 15px;
+      }
+
+      .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 100px;
+        opacity: 0.1;
+        color: #000;
+        z-index: -1;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    {% if dispatch.status == 'PAID' or dispatch.status == 'CANCELLED' %}
+      <div class="watermark">{{ dispatch.status }}</div>
+    {% endif %}
+
+    <div class="header">
+      <div class="company-details">
+        {% if company.logo %}
+          <div class="logo">
+            <img src="{{ company.logo.url }}" alt="{{ company.name }}" />
+          </div>
+        {% endif %}
+        <h2>{{ company.name|default:'-' }}</h2>
+        {{ company.address|default:'-' }}<br />
+        {% if company.city or company.state or company.zip_code %}
+          {{ company.city|default:'' }}{% if company.city and company.state %}, {% endif %}
+          {{ company.state|default:'' }} {{ company.zip_code|default:'' }}<br />
+        {% endif %}
+        {{ company.phone|default:'-' }}
+      </div>
+      <div class="invoice-info">
+        <h1>INVOICE</h1>
+        Invoice #: {{ invoice_number }}<br />
+        Date: {{ date|date:'F j, Y'|default:'-' }}<br />
+        Order #: {{ dispatch.order_number|default:'-' }}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Bill To</div>
+      <div class="info-box">
+        {{ dispatch.customer.name|default:'-' }}<br />
+        {{ dispatch.customer.address|default:'-' }}<br />
+        {% if dispatch.customer.city or dispatch.customer.state or dispatch.customer.zip_code %}
+          {{ dispatch.customer.city|default:'' }}{% if dispatch.customer.city and dispatch.customer.state %}, {% endif %}
+          {{ dispatch.customer.state|default:'' }} {{ dispatch.customer.zip_code|default:'' }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Order Information</div>
+      <div class="info-box">
+        <table class="trip-grid">
+          <tr>
+            <td width="50%">
+              <span class="label">Order Number:</span> {{ dispatch.order.order_number|default:'-' }}<br />
+              <span class="label">Customer Name:</span> {{ dispatch.order.customer_name|default:'-' }}<br />
+              <span class="label">Load Total:</span> {{ load_total.amount|default:'0.00' }} {{ load_total.currency }}
+            </td>
+            <td width="50%">
+              <span class="label">Customer Email:</span> {{ dispatch.order.customer_email|default:'-' }}<br />
+              <span class="label">Customer Phone:</span> {{ dispatch.order.customer_phone|default:'-' }}
+            </td>
+          </tr>
+        </table>
+        {% if dispatch.order.remarks_or_special_instructions %}
+          <div style="margin-top: 10px;">
+            <span class="label">Special Instructions:</span><br />
+            {{ dispatch.order.remarks_or_special_instructions }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Trip Details</div>
+      {% for trip in dispatch.order.trip_set.all %}
+        <div class="trip">
+          <div class="trip-header">Trip #{{ forloop.counter }}</div>
+          <div class="trip-content">
+            <table class="trip-grid">
+              <tr>
+                <td width="50%">
+                  <div class="label">Pickup Information</div>Date: {{ trip.pickup_date|date:'F j, Y H:i'|default:'-' }}<br />
+                  Address: {{ trip.pickup_address|default:'-' }}<br />
+                  Contact: {{ trip.pickup_contact_person|default:'-' }}<br />
+                  Phone: {{ trip.pickup_contact_phone|default:'-' }}
+                </td>
+                <td width="50%">
+                  <div class="label">Delivery Information</div>Date: {{ trip.delivery_date|date:'F j, Y H:i'|default:'-' }}<br />
+                  Address: {{ trip.delivery_address|default:'-' }}<br />
+                  Contact: {{ trip.delivery_contact_person|default:'-' }}<br />
+                  Phone: {{ trip.delivery_contact_phone|default:'-' }}
+                </td>
+              </tr>
+            </table>
+            <div style="margin-top: 10px;">
+              <div class="label">Additional Details</div>Freight Value: {{ trip.freight_value|default:'0.00' }} {{ trip.freight_value_currency }}<br />
+              Status: {{ trip.status|default:'-' }}<br />
+              Carrier: {{ trip.carrier|default:'-' }}<br />
+              Truck: {% if trip.assignment %}{{ trip.assignment.truck.unit }}{% else %}-{% endif %}
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="info-box">No trips associated with this order.</div>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Commission Summary</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Order Date</th>
+            <th>Load Total</th>
+            <th>Commission %</th>
+            <th>Commission Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Dispatch Service - Order #{{ dispatch.order_number|default:'-' }}</td>
+            <td>{{ dispatch.order_date|date:'F j, Y'|default:'-' }}</td>
+            <td>{{ load_total.amount|floatformat:2 }} {{ load_total.currency }}</td>
+            <td>{{ dispatch.commission_percentage|floatformat:1 }}%</td>
+            <td>{{ dispatch.commission_amount|floatformat:2 }} {{ billing_info.commission_currency }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="totals">
+        <tr>
+          <th style="text-align: right;">Total Amount:</th>
+          <td style="text-align: right;">{{ dispatch.commission_amount|floatformat:2 }} {{ billing_info.commission_currency }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="footer-info">
+        <div class="payment-info">
+          <div class="label">Payment Terms</div>Net 30 days<br />
+          Please include invoice number on all payments
+        </div>
+        {% if company.bank_details %}
+          <div class="bank-details">
+            <div class="label">Bank Details</div>
+            {{ company.bank_details|linebreaks }}
+          </div>
+        {% endif %}
+        <div style="font-size: 10px; color: #999; margin-top: 20px; text-align: center;">Thank you for your business</div>
+      </div>
+    </div>
+  </body>
+</html>

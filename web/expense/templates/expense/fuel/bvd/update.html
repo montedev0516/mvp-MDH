@@ -1,0 +1,390 @@
+{% extends "layout/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Edit Fuel Expense{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3">Edit Fuel Expense</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'fuel_expense_bvd_list' %}">Fuel Expenses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'fuel_expense_bvd_detail' bvd.id %}">Details</a></li>
+                    <li class="breadcrumb-item active">Edit</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="card">
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    Please correct the errors below.
+                    <ul>
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                <div class="row g-3">
+                    <!-- Transaction Details -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Transaction Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.date.id_for_label }}" class="form-label required">Date & Time</label>
+                                    {{ form.date }}
+                                    {% if form.date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.date.errors|join:", " }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Format: YYYY-MM-DD HH:MM</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.time.id_for_label }}" class="form-label">Time</label>
+                                    {{ form.time }}
+                                    {% if form.time.errors %}
+                                        <div class="invalid-feedback">{{ form.time.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.company_name.id_for_label }}" class="form-label">Company Name</label>
+                                    {{ form.company_name }}
+                                    {% if form.company_name.errors %}
+                                        <div class="invalid-feedback">{{ form.company_name.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.card_number.id_for_label }}" class="form-label">Card Number</label>
+                                    {{ form.card_number }}
+                                    {% if form.card_number.errors %}
+                                        <div class="invalid-feedback">{{ form.card_number.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.auth_code.id_for_label }}" class="form-label">Auth Code</label>
+                                    {{ form.auth_code }}
+                                    {% if form.auth_code.errors %}
+                                        <div class="invalid-feedback">{{ form.auth_code.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                                    {{ form.status }}
+                                    {% if form.status.errors %}
+                                        <div class="invalid-feedback">{{ form.status.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Information -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Location Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.site_number.id_for_label }}" class="form-label">Site Number</label>
+                                    {{ form.site_number }}
+                                    {% if form.site_number.errors %}
+                                        <div class="invalid-feedback">{{ form.site_number.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.site_name.id_for_label }}" class="form-label">Site Name</label>
+                                    {{ form.site_name }}
+                                    {% if form.site_name.errors %}
+                                        <div class="invalid-feedback">{{ form.site_name.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.site_city.id_for_label }}" class="form-label">City</label>
+                                    {{ form.site_city }}
+                                    {% if form.site_city.errors %}
+                                        <div class="invalid-feedback">{{ form.site_city.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.prov_st.id_for_label }}" class="form-label">Province/State</label>
+                                    {{ form.prov_st }}
+                                    {% if form.prov_st.errors %}
+                                        <div class="invalid-feedback">{{ form.prov_st.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle & Driver -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Vehicle & Driver</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.unit.id_for_label }}" class="form-label">Unit Number</label>
+                                    {{ form.unit }}
+                                    {% if form.unit.errors %}
+                                        <div class="invalid-feedback">{{ form.unit.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.truck.id_for_label }}" class="form-label">Truck</label>
+                                    {{ form.truck }}
+                                    {% if form.truck.errors %}
+                                        <div class="invalid-feedback">{{ form.truck.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.driver.id_for_label }}" class="form-label">Driver</label>
+                                    {{ form.driver }}
+                                    {% if form.driver.errors %}
+                                        <div class="invalid-feedback">{{ form.driver.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.odometer.id_for_label }}" class="form-label">Odometer</label>
+                                    {{ form.odometer }}
+                                    {% if form.odometer.errors %}
+                                        <div class="invalid-feedback">{{ form.odometer.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fuel Details -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Fuel Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity</label>
+                                    {{ form.quantity }}
+                                    {% if form.quantity.errors %}
+                                        <div class="invalid-feedback">{{ form.quantity.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.uom.id_for_label }}" class="form-label">Unit of Measure</label>
+                                    {{ form.uom }}
+                                    {% if form.uom.errors %}
+                                        <div class="invalid-feedback">{{ form.uom.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.retail_ppu.id_for_label }}" class="form-label">Retail PPU</label>
+                                    {{ form.retail_ppu }}
+                                    {% if form.retail_ppu.errors %}
+                                        <div class="invalid-feedback">{{ form.retail_ppu.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.billed_ppu.id_for_label }}" class="form-label">Billed PPU</label>
+                                    {{ form.billed_ppu }}
+                                    {% if form.billed_ppu.errors %}
+                                        <div class="invalid-feedback">{{ form.billed_ppu.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.pre_tax_amt.id_for_label }}" class="form-label">Pre-tax Amount</label>
+                                    {{ form.pre_tax_amt }}
+                                    {% if form.pre_tax_amt.errors %}
+                                        <div class="invalid-feedback">{{ form.pre_tax_amt.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tax Information -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Tax Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.pst.id_for_label }}" class="form-label">PST</label>
+                                    {{ form.pst }}
+                                    {% if form.pst.errors %}
+                                        <div class="invalid-feedback">{{ form.pst.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.gst.id_for_label }}" class="form-label">GST</label>
+                                    {{ form.gst }}
+                                    {% if form.gst.errors %}
+                                        <div class="invalid-feedback">{{ form.gst.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.hst.id_for_label }}" class="form-label">HST</label>
+                                    {{ form.hst }}
+                                    {% if form.hst.errors %}
+                                        <div class="invalid-feedback">{{ form.hst.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.qst.id_for_label }}" class="form-label">QST</label>
+                                    {{ form.qst }}
+                                    {% if form.qst.errors %}
+                                        <div class="invalid-feedback">{{ form.qst.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Amounts -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Final Amounts</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.discount.id_for_label }}" class="form-label">Discount</label>
+                                    {{ form.discount }}
+                                    {% if form.discount.errors %}
+                                        <div class="invalid-feedback">{{ form.discount.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.amount.id_for_label }}" class="form-label">Amount</label>
+                                    {{ form.amount }}
+                                    {% if form.amount.errors %}
+                                        <div class="invalid-feedback">{{ form.amount.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.currency.id_for_label }}" class="form-label">Currency</label>
+                                    {{ form.currency }}
+                                    {% if form.currency.errors %}
+                                        <div class="invalid-feedback">{{ form.currency.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="mt-4 text-end">
+                    <a href="{% url 'fuel_expense_bvd_detail' bvd.id %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure date field has a value
+    const dateField = document.getElementById('{{ form.date.id_for_label }}');
+    if (dateField && !dateField.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        dateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    // Auto-calculate final amount
+    function calculateFinalAmount() {
+        const preTaxAmt = parseFloat(document.getElementById('id_pre_tax_amt').value) || 0;
+        const pst = parseFloat(document.getElementById('id_pst').value) || 0;
+        const gst = parseFloat(document.getElementById('id_gst').value) || 0;
+        const hst = parseFloat(document.getElementById('id_hst').value) || 0;
+        const qst = parseFloat(document.getElementById('id_qst').value) || 0;
+        const discount = parseFloat(document.getElementById('id_discount').value) || 0;
+        
+        const finalAmount = preTaxAmt + pst + gst + hst + qst - discount;
+        document.getElementById('id_amount').value = finalAmount.toFixed(2);
+    }
+
+    // Calculate PPU and amounts when quantity changes
+    function calculateAmounts() {
+        const quantity = parseFloat(document.getElementById('id_quantity').value) || 0;
+        const retailPPU = parseFloat(document.getElementById('id_retail_ppu').value) || 0;
+        const billedPPU = parseFloat(document.getElementById('id_billed_ppu').value) || 0;
+        
+        if (quantity > 0) {
+            if (retailPPU > 0) {
+                const retailAmount = quantity * retailPPU;
+                document.getElementById('id_pre_tax_amt').value = retailAmount.toFixed(2);
+            } else if (billedPPU > 0) {
+                const billedAmount = quantity * billedPPU;
+                document.getElementById('id_pre_tax_amt').value = billedAmount.toFixed(2);
+            }
+            calculateFinalAmount();
+        }
+    }
+
+    // Add event listeners for auto-calculation
+    const calcFields = ['quantity', 'retail_ppu', 'billed_ppu', 'pre_tax_amt', 'pst', 'gst', 'hst', 'qst', 'discount'];
+    calcFields.forEach(field => {
+        const element = document.getElementById(`id_${field}`);
+        if (element) {
+            element.addEventListener('input', calculateAmounts);
+        }
+    });
+
+    // Handle truck selection to auto-fill driver
+    const truckSelect = document.getElementById('id_truck');
+    if (truckSelect) {
+        truckSelect.addEventListener('change', function() {
+            const driverSelect = document.getElementById('id_driver');
+            if (driverSelect) {
+                // You would need to implement an API endpoint to get the driver info
+                // This is just a placeholder for the concept
+                fetch(`/api/truck/${this.value}/driver/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.driver_id) {
+                            driverSelect.value = data.driver_id;
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        });
+    }
+
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}

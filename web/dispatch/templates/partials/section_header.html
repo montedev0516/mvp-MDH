@@ -1,0 +1,21 @@
+{% load django_bootstrap5 %}
+
+<div class="section-header">
+  {% if icon %}<i class="fas fa-{{ icon }} me-2"></i>{% endif %}
+  {{ title }}
+</div>
+
+<style>
+  .section-header {
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    margin: 1.5rem 0 1rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+    color: var(--bs-primary);
+  }
+
+  .card-body .section-header:first-child {
+    margin-top: 0;
+  }
+</style> 

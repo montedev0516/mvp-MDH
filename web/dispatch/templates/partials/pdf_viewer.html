@@ -1,0 +1,91 @@
+{% load django_bootstrap5 %}
+
+<div class="pdf-viewer-container">
+  {% if pdf_url %}
+    <div id="pdf-controls" class="border-bottom p-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-secondary" id="prev">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" id="next">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <span class="mx-2">
+          Page <span id="page_num"></span> of <span id="page_count"></span>
+        </span>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-secondary" id="zoom-out">
+            <i class="fas fa-search-minus"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" id="zoom-in">
+            <i class="fas fa-search-plus"></i>
+          </button>
+          {% if show_change_button %}
+            <button class="btn btn-sm btn-outline-danger" id="change-file">
+              <i class="fas fa-exchange-alt"></i> Change File
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="pdf-container">
+      <canvas id="{{ container_id|default:'pdf-viewer' }}"></canvas>
+    </div>
+  {% else %}
+    <div class="pdf-container d-flex align-items-center justify-content-center">
+      <div class="no-pdf-message">
+        <i class="fas fa-file-pdf fa-3x mb-3"></i>
+        <h4>No PDF Available</h4>
+        <p>{{ no_pdf_message|default:'There is no PDF file associated with this document.' }}</p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+  .pdf-viewer-container {
+    height: 100%;
+  }
+
+  .pdf-container {
+    height: calc(100vh - 300px);
+    min-height: 500px;
+    overflow-y: auto;
+    background-color: var(--bs-tertiary-bg);
+  }
+
+  #pdf-controls {
+    background-color: var(--bs-body-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .no-pdf-message {
+    text-align: center;
+    color: var(--bs-gray-600);
+    padding: 2rem;
+  }
+
+  /* Dark mode support */
+  [data-bs-theme='dark'] .pdf-container {
+    background-color: var(--bs-dark);
+  }
+
+  [data-bs-theme='dark'] #pdf-controls {
+    background-color: var(--bs-tertiary-bg);
+  }
+</style>
+
+{% if pdf_url %}
+  {% include 'partials/pdfjs/viewer.html' with
+    pdf_url=pdf_url
+    container_id=container_id|default:'pdf-viewer'
+    initial_scale=initial_scale|default:1.0
+    show_loading=True
+    custom_controls=True
+  %}
+{% endif %} 

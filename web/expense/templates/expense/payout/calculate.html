@@ -1,0 +1,302 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Calculate Driver Payout</h1>
+        <div>
+            <a href="{% url 'payout_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Instructions Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle text-info"></i> How Payout Calculation Works
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Revenue Sources:</h6>
+                    <ul class="mb-3">
+                        <li>Completed dispatches within date range</li>
+                        <li>Freight values by currency (CAD/USD)</li>
+                        <li>Commission deductions per dispatch</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Expense Sources:</h6>
+                    <ul class="mb-3">
+                        <li>BVD fuel expenses</li>
+                        <li>Other driver expenses</li>
+                        <li>Grouped by currency</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="alert alert-info mb-0">
+                <strong>Note:</strong> The calculation will find all completed dispatches and approved expenses 
+                for the selected driver within the specified date range. Exchange rate is used to convert 
+                between CAD and USD amounts for final totals.
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculation Form -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-calculator"></i> Payout Calculation
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="payout-calculation-form">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- Driver Selection -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.driver.label_tag }}
+                        {{ form.driver|add_class:"form-control" }}
+                        {% if form.driver.errors %}
+                            <div class="text-danger">{{ form.driver.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Exchange Rate -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.exchange_rate.label_tag }}
+                        {{ form.exchange_rate|add_class:"form-control" }}
+                        <small class="form-text text-muted">CAD to USD exchange rate</small>
+                        {% if form.exchange_rate.errors %}
+                            <div class="text-danger">{{ form.exchange_rate.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- From Date -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.from_date.label_tag }}
+                        {{ form.from_date|add_class:"form-control" }}
+                        {% if form.from_date.errors %}
+                            <div class="text-danger">{{ form.from_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- To Date -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.to_date.label_tag }}
+                        {{ form.to_date|add_class:"form-control" }}
+                        {% if form.to_date.errors %}
+                            <div class="text-danger">{{ form.to_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                <div id="calculation-preview" class="mt-4" style="display: none;">
+                    <hr>
+                    <h6><i class="fas fa-eye"></i> Calculation Preview</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">CAD Calculations</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            {{ form.cad_revenue.label_tag }}
+                                            {{ form.cad_revenue|add_class:"form-control" }}
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            {{ form.cad_commission.label_tag }}
+                                            {{ form.cad_commission|add_class:"form-control" }}
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            {{ form.cad_expenses.label_tag }}
+                                            {{ form.cad_expenses|add_class:"form-control" }}
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label">CAD Net Payout</label>
+                                            <input type="text" id="cad_payout_display" class="form-control" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">USD Calculations</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            {{ form.usd_revenue.label_tag }}
+                                            {{ form.usd_revenue|add_class:"form-control" }}
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            {{ form.usd_commission.label_tag }}
+                                            {{ form.usd_commission|add_class:"form-control" }}
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            {{ form.usd_expenses.label_tag }}
+                                            {{ form.usd_expenses|add_class:"form-control" }}
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label">USD Net Payout</label>
+                                            <input type="text" id="usd_payout_display" class="form-control" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Final Totals -->
+                    <div class="card mt-3">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0">Final Amounts (After Currency Conversion)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Total CAD Amount</label>
+                                    <input type="text" id="final_cad_display" class="form-control font-weight-bold" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Total USD Amount</label>
+                                    <input type="text" id="final_usd_display" class="form-control font-weight-bold" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="mt-4">
+                    <button type="button" id="preview-calculation" class="btn btn-info me-2">
+                        <i class="fas fa-eye"></i> Preview Calculation
+                    </button>
+                    <button type="submit" class="btn btn-success me-2">
+                        <i class="fas fa-save"></i> Calculate & Save Payout
+                    </button>
+                    <a href="{% url 'payout_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const previewButton = document.getElementById('preview-calculation');
+    const previewSection = document.getElementById('calculation-preview');
+    const form = document.getElementById('payout-calculation-form');
+    
+    previewButton.addEventListener('click', function() {
+        const formData = new FormData(form);
+        const data = {
+            driver_id: formData.get('driver'),
+            from_date: formData.get('from_date'),
+            to_date: formData.get('to_date'),
+            exchange_rate: formData.get('exchange_rate') || 1.0000
+        };
+        
+        // Validate required fields
+        if (!data.driver_id || !data.from_date || !data.to_date) {
+            alert('Please fill in all required fields before previewing.');
+            return;
+        }
+        
+        // Show loading state
+        previewButton.disabled = true;
+        previewButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+        
+        fetch('{% url "payout_calculate_api" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                const calc = result.data;
+                
+                // Update form fields with calculated values
+                document.getElementById('id_cad_revenue').value = calc.cad_revenue.toFixed(2);
+                document.getElementById('id_cad_commission').value = calc.cad_commission.toFixed(2);
+                document.getElementById('id_cad_expenses').value = calc.cad_expenses.toFixed(2);
+                document.getElementById('id_usd_revenue').value = calc.usd_revenue.toFixed(2);
+                document.getElementById('id_usd_commission').value = calc.usd_commission.toFixed(2);
+                document.getElementById('id_usd_expenses').value = calc.usd_expenses.toFixed(2);
+                
+                // Update display fields
+                document.getElementById('cad_payout_display').value = '$' + calc.cad_payout.toFixed(2);
+                document.getElementById('usd_payout_display').value = '$' + calc.usd_payout.toFixed(2);
+                document.getElementById('final_cad_display').value = '$' + calc.final_cad_amount.toFixed(2);
+                document.getElementById('final_usd_display').value = '$' + calc.final_usd_amount.toFixed(2);
+                
+                // Show preview section
+                previewSection.style.display = 'block';
+                previewSection.scrollIntoView({ behavior: 'smooth' });
+                
+            } else {
+                throw new Error(result.error || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Payout calculation error:', error);
+            
+            // Show user-friendly error message
+            let errorMessage = 'Error calculating payout. ';
+            
+            if (error.message.includes('Driver not found')) {
+                errorMessage += 'Please select a valid driver.';
+            } else if (error.message.includes('date')) {
+                errorMessage += 'Please check your date values.';
+            } else if (error.message.includes('exchange rate')) {
+                errorMessage += 'Please enter a valid exchange rate.';
+            } else if (error.message.includes('foreign key constraint')) {
+                errorMessage += 'Database configuration issue. Please contact support.';
+            } else {
+                errorMessage += 'Please try again or contact support if the problem persists.';
+            }
+            
+            alert(errorMessage + '\n\nDetails: ' + error.message);
+        })
+        .finally(() => {
+            previewButton.disabled = false;
+            previewButton.innerHTML = '<i class="fas fa-eye"></i> Preview Calculation';
+        });
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,255 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+
+{% block extra_head %}
+{% include 'partials/pdfjs/script.html' %}
+{% include 'partials/pdfjs/style.html' %}
+<style>
+  /* Section headers */
+  .section-header {
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    margin: 1.5rem 0 1rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+    color: var(--bs-primary);
+  }
+
+  .section-header i {
+    margin-right: 0.5rem;
+  }
+
+  /* First section header needs no top margin */
+  .card-body .section-header:first-child {
+    margin-top: 0;
+  }
+
+  /* Status badge styling */
+  .status-badge {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: 2rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid wide py-4">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <div>
+        <h1 class="h3 mb-1">Dispatch Details</h1>
+        <p class="text-muted mb-0">Order #{{ dispatch.order_number }}</p>
+      </div>
+      <div>
+        <span class="badge bg-{{ dispatch.status|default:'secondary' }} status-badge">
+          {{ dispatch.get_status_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wrapper">
+    <div class="main-content">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+              {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="section-header">
+              <i class="fas fa-info-circle"></i>Basic Information
+            </div>
+
+            <!-- Order Number and Date -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                {{ form.order_number|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.order_date|as_crispy_field }}
+              </div>
+            </div>
+
+            <!-- Customer -->
+            {{ form.customer|as_crispy_field }}
+
+            <div class="section-header">
+              <i class="fas fa-truck"></i>Assignment Details
+            </div>
+
+            <!-- Trip -->
+            {{ form.trip|as_crispy_field }}
+
+            <!-- Driver and Truck -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                {{ form.driver|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.truck|as_crispy_field }}
+              </div>
+            </div>
+
+            <!-- Carrier -->
+            {{ form.carrier|as_crispy_field }}
+
+            <div class="section-header">
+              <i class="fas fa-dollar-sign"></i>Financial Details
+            </div>
+
+            <!-- Commission information -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                {{ form.commission_amount|as_crispy_field }}
+              </div>
+              <div class="col-md-4">
+                {{ form.commission_percentage|as_crispy_field }}
+              </div>
+              <div class="col-md-4">
+                {{ form.commission_currency|as_crispy_field }}
+              </div>
+            </div>
+
+            <div class="section-header">
+              <i class="fas fa-clipboard-list"></i>Status & Notes
+            </div>
+
+            <!-- Status Field -->
+            <div class="mb-3">
+              {% if dispatch.status == 'Cancelled' or dispatch.status == 'Invoiced' %}
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <input type="text" class="form-control" value="{{ dispatch.get_status_display }}" readonly>
+                <input type="hidden" name="status" value="{{ dispatch.status }}">
+              </div>
+              {% else %}
+              {{ form.status|as_crispy_field }}
+              {% endif %}
+            </div>
+
+            <!-- Notes -->
+            {{ form.notes|as_crispy_field }}
+
+            <div class="d-flex gap-2 mt-4">
+              {% if not is_final %}
+              {% bootstrap_button button_type="submit" content="Save Changes" button_class="btn-primary" %}
+              {% if dispatch.status == 'Assigned' %}
+              <button type="submit" name="generate_invoice" class="btn btn-success">
+                <i class="fas fa-file-invoice"></i> Generate Invoice
+              </button>
+              {% endif %}
+              {% endif %}
+              <a href="{% url 'dispatch:dispatch_list' %}" class="btn btn-outline-secondary">Back to List</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="main-content" style="height: 800px; display: flex; flex-direction: column; gap: 1rem;">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-0">Order Information</h5>
+        </div>
+        <div class="card-body"> 
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Customer Name</dt>
+            <dd class="col-sm-8">{{ dispatch.order.customer_name }}</dd>
+
+            <dt class="col-sm-4">Customer Address</dt>
+            <dd class="col-sm-8">{{ dispatch.order.customer_address }}</dd>
+            
+            <dt class="col-sm-4">Customer Phone</dt>
+            <dd class="col-sm-8">{{ dispatch.order.customer_phone }}</dd>
+
+            <dt class="col-sm-4">Origin</dt>
+            <dd class="col-sm-8">{{ dispatch.order.origin|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Destination</dt>
+            <dd class="col-sm-8">{{ dispatch.order.destination|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Pickup Date</dt>
+            <dd class="col-sm-8">{{ dispatch.order.pickup_date|date:"Y-m-d H:i"|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Delivery Date</dt>
+            <dd class="col-sm-8">{{ dispatch.order.delivery_date|date:"Y-m-d H:i"|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Load Total</dt>
+            <dd class="col-sm-8">{{ dispatch.order.load_total|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Load Currency</dt>
+            <dd class="col-sm-8">{{ dispatch.order.load_currency|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Special Instructions</dt>
+            <dd class="col-sm-8">{{ dispatch.order.remarks_or_special_instructions|default:'None' }}</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="card shadow-sm">
+        <!-- History Section -->
+         <div class="card-header">
+          <h5 class="card-title mb-0">History</h5>
+         </div>
+         <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-4">Created At</dt>
+            <dd class="col-sm-8">{{ dispatch.created_at|date:'F j, Y H:i' }}</dd>
+            <dt class="col-sm-4">Last Updated</dt>
+            <dd class="col-sm-8">{{ dispatch.updated_at|date:'F j, Y H:i' }}</dd>
+            <dt class="col-sm-4">Current Status</dt>
+            <dd class="col-sm-8">{{ dispatch.get_status_display }}</dd>
+          </dl>
+         </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const commissionPercentageInput = document.getElementById('id_commission_percentage');
+    const commissionAmountInput = document.getElementById('id_commission_amount');
+    const loadTotal = parseFloat('{{ dispatch.order.load_total|default:0 }}');
+
+    function calculateCommission() {
+      if (commissionPercentageInput && commissionAmountInput && loadTotal > 0) {
+        const percentage = parseFloat(commissionPercentageInput.value) || 0;
+        const calculatedAmount = (loadTotal * percentage / 100).toFixed(2);
+        commissionAmountInput.value = calculatedAmount;
+      }
+    }
+
+    // Calculate only if not disabled (for final statuses)
+    if (commissionPercentageInput && !commissionPercentageInput.disabled) {
+      // Set initial values if empty
+      if (!commissionPercentageInput.value) {
+        commissionPercentageInput.value = "10.0";
+      }
+
+      // Calculate initial value
+      calculateCommission();
+
+      // Update when percentage changes
+      commissionPercentageInput.addEventListener('input', calculateCommission);
+    }
+
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends 'layout/base.html' %}
+{% load django_tables2 %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+  {% csrf_token %}
+  <div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3">Usage Details - {{ usage.tenant.name }}</h1>
+      <div>
+        <span class="text-muted">Period: {{ usage.start_date|date }} - {{ usage.end_date|date }}</span>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      {% for resource_type, stats in usage_stats.items %}
+        <div class="col-md-6 col-lg-3 mb-4">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">{{ resource_type|title }}</h5>
+              <div class="progress mb-2">
+                <div class="progress-bar {% if stats.percentage >= 90 %}
+
+
+
+
+
+
+
+
+                    bg-danger
+
+
+
+
+
+
+
+
+                  {% elif stats.percentage >= 75 %}
+
+
+
+
+
+
+
+
+                    bg-warning
+
+
+
+
+
+
+
+
+                  {% else %}
+
+
+
+
+
+
+
+
+                    bg-success
+
+
+
+
+
+
+
+
+                  {% endif %}"
+                  role="progressbar"
+                  style="width: {{ stats.percentage }}%"
+                  aria-valuenow="{{ stats.percentage }}"
+                  aria-valuemin="0"
+                  aria-valuemax="100">{{ stats.percentage|floatformat:1 }}%</div>
+              </div>
+              <p class="card-text">
+                {{ stats.current }} / {{ stats.limit }}
+                {% if resource_type == 'storage' %}MB{% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if active_alerts %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Active Alerts</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Feature</th>
+                  <th>Threshold</th>
+                  <th>Notified At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for alert in active_alerts %}
+                  {% if alert.tenant == request.user.profile.tenant %}
+                    <tr>
+                      <td>
+                        <span class="text-bg-danger fw-semibold">
+                          {% if alert.alert_type == 'warning' %}
+                            <span class="text-bg-warning">Warning</span>
+                          {% elif alert.alert_type == 'exceeded' %}
+                            <span class="text-bg-danger">Exceeded</span>
+                          {% else %}
+                            <span class="text-bg-info">Info</span>
+                          {% endif %}
+                        </span>
+                      </td>
+                      <td>{{ alert.feature }}</td>
+                      <td>{{ alert.threshold_percentage }}%</td>
+                      <td>{{ alert.notified_at|date:'Y-m-d H:i' }}</td>
+                      <td>
+                        <!-- Add tenant info for debugging -->
+                        <small class="text-muted d-block mb-1">
+                          Alert ID: {{ alert.id }}<br />
+                          Tenant: {{ alert.tenant.id }}
+                        </small>
+                        <button class="btn btn-sm btn-outline-secondary acknowledge-alert" data-alert-id="{{ alert.id }}" data-tenant="{{ alert.tenant.id }}">Acknowledge</button>
+                      </td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Recent Usage Logs</h5>
+      </div>
+      <div class="card-body">
+        {% render_table table %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    /* Pagination styles */
+    .pagination {
+      margin-bottom: 0;
+    }
+
+    /* Dark mode styles */
+    [data-bs-theme='dark'] .page-link {
+      background-color: #2b3035;
+      border-color: #495057;
+      color: #e9ecef;
+    }
+
+    [data-bs-theme='dark'] .page-item.active .page-link {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+    }
+
+    [data-bs-theme='dark'] .page-item.disabled .page-link {
+      background-color: #2b3035;
+      border-color: #495057;
+      color: #6c757d;
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-block;
+      padding: 0.35em 0.65em;
+      font-size: 0.75em;
+      font-weight: 700;
+      line-height: 1;
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: baseline;
+      border-radius: 0.375rem;
+    }
+
+    /* Alert badge styles */
+    .text-bg-warning {
+      background-color: #ffc107 !important;
+      color: #000 !important;
+    }
+
+    .text-bg-danger {
+      background-color: #dc3545 !important;
+      color: #fff !important;
+    }
+
+    .text-bg-info {
+      background-color: #0dcaf0 !important;
+      color: #000 !important;
+    }
+
+    /* Force text visibility in both modes */
+    [data-bs-theme='light'] .text-bg-warning,
+    [data-bs-theme='dark'] .text-bg-warning {
+      color: #000 !important;
+    }
+
+    [data-bs-theme='light'] .text-bg-danger,
+    [data-bs-theme='dark'] .text-bg-danger {
+      color: #fff !important;
+    }
+
+    [data-bs-theme='light'] .text-bg-info,
+    [data-bs-theme='dark'] .text-bg-info {
+      color: #000 !important;
+    }
+  </style>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+
+      document.querySelectorAll('.acknowledge-alert').forEach((button) => {
+        button.addEventListener('click', async function () {
+          const alertId = this.dataset.alertId
+          const row = this.closest('tr')
+
+          try {
+            const response = await fetch(`/subscriptions/api/alerts/${alertId}/acknowledge/`, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json'
+              }
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+              throw new Error(data.message || 'Failed to acknowledge alert')
+            }
+
+            // Success handling
+            row.remove()
+            const alertHtml = `
+                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                        Alert acknowledged successfully
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                `
+            document.querySelector('.container-fluid').insertAdjacentHTML('afterbegin', alertHtml)
+
+            // Check if there are no more alerts
+            const remainingAlerts = document.querySelectorAll('.acknowledge-alert')
+            if (remainingAlerts.length === 0) {
+              const alertsCard = document.querySelector('.card:has(.table)')
+              if (alertsCard) {
+                alertsCard.remove()
+              }
+            }
+          } catch (error) {
+            console.error('Error:', error)
+            const alertHtml = `
+                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                        ${error.message}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                `
+            document.querySelector('.container-fluid').insertAdjacentHTML('afterbegin', alertHtml)
+          }
+
+          // Remove any alerts after 5 seconds
+          setTimeout(() => {
+            document.querySelectorAll('.alert').forEach((alert) => alert.remove())
+          }, 5000)
+        })
+      })
+      button.addEventListener('click', async function () {
+        const alertId = this.dataset.alertId
+        console.log('Attempting to acknowledge alert:', alertId) // Debug log
+
+        try {
+          const response = await fetch(`/subscriptions/api/alerts/${alertId}/acknowledge/`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCsrfToken(),
+              'Content-Type': 'application/json'
+            }
+          })
+
+          const data = await response.json()
+          console.log('Response:', data) // Debug log
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Server returned ' + response.status)
+          }
+
+          // Rest of the success handling code...
+        } catch (error) {
+          console.error('Detailed error:', {
+            alertId: alertId,
+            error: error.message
+          })
+          // Rest of the error handling code...
+        }
+      })
+    })
+  </script>
+{% endblock %}

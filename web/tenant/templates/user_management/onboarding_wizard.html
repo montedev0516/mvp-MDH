@@ -1,0 +1,13 @@
+{# templates/user_management/onboarding_wizard.html #}
+{% extends 'user_management/base_wizard.html' %}
+
+{% block wizard_content %}
+  <h2 class="card-title mb-4">Create New Tenant</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary">Next</button>
+    </div>
+  </form>
+{% endblock %}

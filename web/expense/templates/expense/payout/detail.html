@@ -1,0 +1,352 @@
+{% extends 'layout/base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Payout Details</h1>
+        <div>
+            <a href="{% url 'payout_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+            <a href="{% url 'payout_update' payout.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            {% if payout.status == 'Draft' %}
+                <form method="post" action="{% url 'payout_recalculate' payout.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-calculator"></i> Recalculate
+                    </button>
+                </form>
+            {% endif %}
+            {% if payout.status == 'Completed' %}
+                <form method="post" action="{% url 'payout_sync_status' payout.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-info" title="Check and fix expense status synchronization">
+                        <i class="fas fa-sync"></i> Sync Status
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Payout Summary Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-user"></i> {{ payout.driver }} - Payout Summary
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Period:</strong><br>
+                    {{ payout.from_date|date:'M d, Y' }} to {{ payout.to_date|date:'M d, Y' }}
+                </div>
+                <div class="col-md-2">
+                    <strong>Status:</strong><br>
+                    <span class="badge {% if payout.status == 'Draft' %}bg-secondary{% elif payout.status == 'Processing' %}bg-warning{% elif payout.status == 'Completed' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ payout.get_status_display }}
+                    </span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Exchange Rate:</strong><br>
+                    {{ payout.exchange_rate|floatformat:4 }}
+                </div>
+                <div class="col-md-2">
+                    <strong>Created:</strong><br>
+                    {{ payout.created_at|date:'M d, Y' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Final Amounts:</strong><br>
+                    CAD: ${{ payout.final_cad_amount|floatformat:2 }}<br>
+                    USD: ${{ payout.final_usd_amount|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <!-- CAD Summary -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-dollar-sign"></i> CAD Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h6 class="text-success">Revenue</h6>
+                                <h4>${{ payout.cad_revenue|floatformat:2 }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-danger">Deductions</h6>
+                            <p class="mb-1">Commission: ${{ payout.cad_commission|floatformat:2 }}</p>
+                            <p class="mb-1">Expenses: ${{ payout.cad_expenses|floatformat:2 }}</p>
+                            <hr class="my-2">
+                            <h5 class="text-primary">Net: ${{ payout.cad_payout|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <!-- USD Summary -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-dollar-sign"></i> USD Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h6 class="text-success">Revenue</h6>
+                                <h4>${{ payout.usd_revenue|floatformat:2 }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-danger">Deductions</h6>
+                            <p class="mb-1">Commission: ${{ payout.usd_commission|floatformat:2 }}</p>
+                            <p class="mb-1">Expenses: ${{ payout.usd_expenses|floatformat:2 }}</p>
+                            <hr class="my-2">
+                            <h5 class="text-primary">Net: ${{ payout.usd_payout|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Summary -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Period Statistics</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body">
+                            <h4 class="text-primary">{{ expense_summary.dispatch_count }}</h4>
+                            <p class="mb-0">Completed Dispatches</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body">
+                            <h4 class="text-warning">{{ expense_summary.bvd_count }}</h4>
+                            <p class="mb-0">Fuel Expenses</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body">
+                            <h4 class="text-info">{{ expense_summary.other_count }}</h4>
+                            <p class="mb-0">Other Expenses</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body">
+                            <h4 class="text-success">{{ expense_summary.bvd_count|add:expense_summary.other_count }}</h4>
+                            <p class="mb-0">Total Expenses</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Breakdown Tabs -->
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="detailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="dispatches-tab" data-bs-toggle="tab" data-bs-target="#dispatches" type="button" role="tab">
+                        <i class="fas fa-truck"></i> Dispatches ({{ dispatches.count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="fuel-tab" data-bs-toggle="tab" data-bs-target="#fuel" type="button" role="tab">
+                        <i class="fas fa-gas-pump"></i> Fuel Expenses ({{ bvd_expenses.count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="other-tab" data-bs-toggle="tab" data-bs-target="#other" type="button" role="tab">
+                        <i class="fas fa-receipt"></i> Other Expenses ({{ other_expenses.count }})
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="detailTabsContent">
+                <!-- Dispatches Tab -->
+                <div class="tab-pane fade show active" id="dispatches" role="tabpanel">
+                    {% if dispatches %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Trip ID</th>
+                                        <th>Route</th>
+                                        <th>Load Total</th>
+                                        <th>Commission</th>
+                                        <th>Currency</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dispatch in dispatches %}
+                                        <tr>
+                                            <td>{{ dispatch.actual_end|date:'M d, Y'|default:'N/A' }}</td>
+                                            <td>{{ dispatch.trip.trip_id|default:'N/A' }}</td>
+                                            <td>
+                                                {% if dispatch.order %}
+                                                    {{ dispatch.order.origin|default:'N/A' }} → {{ dispatch.order.destination|default:'N/A' }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if dispatch.trip and dispatch.trip.freight_value %}
+                                                    ${{ dispatch.trip.freight_value|floatformat:2 }}
+                                                {% elif dispatch.order and dispatch.order.load_total %}
+                                                    ${{ dispatch.order.load_total|floatformat:2 }}
+                                                {% else %}
+                                                    $0.00
+                                                {% endif %}
+                                            </td>
+                                            <td>${{ dispatch.commission_amount|floatformat:2|default:'0.00' }}</td>
+                                            <td>
+                                                {% if dispatch.trip and dispatch.trip.currency %}
+                                                    {{ dispatch.trip.currency }}
+                                                {% elif dispatch.order and dispatch.order.load_currency %}
+                                                    {{ dispatch.order.load_currency }}
+                                                {% else %}
+                                                    CAD
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">{{ dispatch.get_status_display }}</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-truck fa-3x mb-3"></i>
+                            <p>No dispatches found for this period.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Fuel Expenses Tab -->
+                <div class="tab-pane fade" id="fuel" role="tabpanel">
+                    {% if bvd_expenses %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Station</th>
+                                        <th>Unit</th>
+                                        <th>Quantity</th>
+                                        <th>Amount</th>
+                                        <th>Currency</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for expense in bvd_expenses %}
+                                        <tr>
+                                            <td>{{ expense.date|date:'M d, Y' }}</td>
+                                            <td>{{ expense.site_name }} - {{ expense.site_city }}</td>
+                                            <td>{{ expense.unit }}</td>
+                                            <td>{{ expense.quantity|floatformat:2 }} {{ expense.uom }}</td>
+                                            <td>${{ expense.amount|floatformat:2 }}</td>
+                                            <td>{{ expense.currency }}</td>
+                                            <td>
+                                                <span class="badge bg-warning">{{ expense.get_status_display }}</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3">
+                            <p><strong>Totals:</strong> 
+                                CAD: ${{ expense_summary.bvd_total_cad|floatformat:2 }} | 
+                                USD: ${{ expense_summary.bvd_total_usd|floatformat:2 }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-gas-pump fa-3x mb-3"></i>
+                            <p>No fuel expenses found for this period.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Other Expenses Tab -->
+                <div class="tab-pane fade" id="other" role="tabpanel">
+                    {% if other_expenses %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Currency</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for expense in other_expenses %}
+                                        <tr>
+                                            <td>{{ expense.date|date:'M d, Y' }}</td>
+                                            <td>{{ expense.name }}</td>
+                                            <td>
+                                                <span class="badge bg-info">{{ expense.get_category_display }}</span>
+                                            </td>
+                                            <td>${{ expense.amount|floatformat:2 }}</td>
+                                            <td>{{ expense.currency }}</td>
+                                            <td>
+                                                <span class="badge bg-warning">{{ expense.get_status_display }}</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3">
+                            <p><strong>Totals:</strong> 
+                                CAD: ${{ expense_summary.other_total_cad|floatformat:2 }} | 
+                                USD: ${{ expense_summary.other_total_usd|floatformat:2 }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-receipt fa-3x mb-3"></i>
+                            <p>No other expenses found for this period.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

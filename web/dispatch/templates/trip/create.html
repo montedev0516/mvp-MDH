@@ -1,0 +1,408 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block extra_head %}
+  {% include 'partials/pdfjs/script.html' %}
+  {% include 'partials/pdfjs/style.html' %}
+  <style>
+    /* Add custom styles for improved spacing */
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    .form-group, .mb-3 {
+      margin-bottom: 1.25rem !important;
+    }
+
+    .form-label {
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .form-control, .form-select {
+      padding: 0.5rem 0.75rem;
+      min-height: 42px;
+    }
+
+    .section-heading {
+      font-size: 1.1rem;
+      font-weight: 600;
+      padding-bottom: 0.75rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .card-header h4 {
+      font-size: 1.25rem;
+    }
+
+    .pdf-container {
+      height: 500px;
+    }
+
+    /* Smart UI enhancements */
+    .smart-card {
+      border-radius: 0.5rem;
+      box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05);
+      transition: all 0.2s ease;
+    }
+
+    .smart-card:hover {
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+
+    .form-control::placeholder, .form-select::placeholder {
+      color: #adb5bd;
+      opacity: 0.8;
+    }
+
+    .input-with-icon {
+      position: relative;
+    }
+
+    .input-with-icon .form-control {
+      padding-left: 2.5rem;
+    }
+
+    .input-with-icon i {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6c757d;
+    }
+
+    .input-with-icon.currency-input .form-control {
+      padding-left: 1.75rem;
+    }
+
+    .input-with-icon.currency-input::before {
+      content: "$";
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #495057;
+      font-weight: 500;
+    }
+
+    .calculated-field {
+      background-color: #f8f9fa;
+      border-left: 3px solid #0d6efd;
+    }
+
+    .trip-connection {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .location {
+      flex: 1;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      background: #f8f9fa;
+      text-align: center;
+    }
+
+    .location-divider {
+      height: 1px;
+      background: #dee2e6;
+      flex-grow: 1;
+      margin: 0 0.5rem;
+      position: relative;
+    }
+
+    .location-divider::after {
+      content: "→";
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 0 0.5rem;
+      color: #6c757d;
+    }
+
+    .btn-lg {
+      padding: 0.75rem 1.5rem;
+    }
+
+    .help-icon {
+      color: #6c757d;
+      font-size: 0.875rem;
+      margin-left: 0.25rem;
+      cursor: help;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h3>Create Trip</h3>
+            <p class="text-muted mb-0">Order #{{ order.order_number }}</p>
+          </div>
+          <div>
+            <a href="{% url 'dispatch:order_detail' pk=order.pk %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-1"></i> Back to Order
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Section -->
+    <div class="row">
+      <!-- Main Form Column -->
+      <div class="col-md-8">
+        <div class="card smart-card">
+          <div class="card-header bg-primary text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <h4 class="mb-0">Trip Details</h4>
+              <span class="text-white-50">
+                <i class="fas fa-calendar-alt me-1"></i>
+                {{ order.pickup_date|date:"M d" }} - {{ order.delivery_date|date:"M d, Y" }}
+              </span>
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="post" class="row g-3" id="trip-form">
+              {% csrf_token %}
+              
+              <!-- Status field -->
+              {{ form.status }}
+
+              {% if form.status.errors %}
+              <div class="col-12">
+                <div class="alert alert-danger">
+                  {{ form.status.errors|join:', ' }}
+                </div>
+              </div>
+              {% endif %}
+
+              {% if form.non_field_errors %}
+              <div class="col-12">
+                <div class="alert alert-danger">
+                  <ul class="mb-0">
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if messages %}
+              <div class="col-12">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                  {{ message }}
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <!-- Trip Planning Section -->
+              <div class="col-12">
+                <h5 class="section-heading">
+                  <i class="fas fa-route me-2 text-primary"></i>Trip Planning
+                </h5>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label class="form-label">Estimated Distance (km)</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-ruler"></i></span>
+                        {{ form.estimated_distance }}
+                      </div>
+                      {% if form.estimated_distance.errors %}
+                      <div class="invalid-feedback d-block">{{ form.estimated_distance.errors|join:', ' }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label class="form-label">Estimated Duration</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                        {{ form.estimated_duration_hours }}
+                        <span class="input-group-text">hrs</span>
+                        {{ form.estimated_duration_minutes }}
+                        <span class="input-group-text">min</span>
+                      </div>
+                      {% if form.estimated_duration_hours.errors or form.estimated_duration_minutes.errors %}
+                      <div class="invalid-feedback d-block">
+                        {{ form.estimated_duration_hours.errors|join:', ' }}
+                        {{ form.estimated_duration_minutes.errors|join:', ' }}
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cost Estimates Section -->
+              <div class="col-12">
+                <h5 class="section-heading">
+                  <i class="fas fa-dollar-sign me-2 text-primary"></i>Cost Estimates
+                </h5>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label class="form-label">Estimated Fuel Cost</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-gas-pump"></i></span>
+                        {{ form.fuel_estimated }}
+                      </div>
+                      {% if form.fuel_estimated.errors %}
+                      <div class="invalid-feedback d-block">{{ form.fuel_estimated.errors|join:', ' }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label class="form-label">Estimated Toll Cost</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-road"></i></span>
+                        {{ form.toll_estimated }}
+                      </div>
+                      {% if form.toll_estimated.errors %}
+                      <div class="invalid-feedback d-block">{{ form.toll_estimated.errors|join:', ' }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label class="form-label">Estimated Freight Value</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-box"></i></span>
+                        {{ form.freight_estimated }}
+                      </div>
+                      {% if form.freight_estimated.errors %}
+                      <div class="invalid-feedback d-block">{{ form.freight_estimated.errors|join:', ' }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label class="form-label">Actual Freight Value</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-money-bill"></i></span>
+                        {{ form.freight_value }}
+                      </div>
+                      {% if form.freight_value.errors %}
+                      <div class="invalid-feedback d-block">{{ form.freight_value.errors|join:', ' }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label class="form-label">Currency</label>
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-money-bill"></i></span>
+                        {{ form.currency }}
+                        {{ form.freight_value_currency }}
+                      </div>
+                      {% if form.currency.errors %}
+                      <div class="invalid-feedback d-block">{{ form.currency.errors|join:', ' }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notes Section -->
+              <div class="col-12">
+                <h5 class="section-heading">
+                  <i class="fas fa-sticky-note me-2 text-primary"></i>Notes
+                </h5>
+                <div class="form-group">
+                  {{ form.notes }}
+                  {% if form.notes.errors %}
+                  <div class="invalid-feedback d-block">{{ form.notes.errors|join:', ' }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="col-12 mt-4">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save me-1"></i>Create Trip
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Column -->
+      <div class="col-md-4">
+        <!-- Order Summary Card -->
+        <div class="card smart-card mb-4">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Order Summary</h5>
+          </div>
+          <div class="card-body">
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Order #</dt>
+              <dd class="col-sm-8">{{ order.order_number }}</dd>
+
+              <dt class="col-sm-4">Customer</dt>
+              <dd class="col-sm-8">{{ order.customer_name }}</dd>
+
+              <dt class="col-sm-4">Origin</dt>
+              <dd class="col-sm-8">{{ order.origin }}</dd>
+
+              <dt class="col-sm-4">Destination</dt>
+              <dd class="col-sm-8">{{ order.destination }}</dd>
+
+              <dt class="col-sm-4">Pickup</dt>
+              <dd class="col-sm-8">{{ order.pickup_date|date:"M d, Y" }}</dd>
+
+              <dt class="col-sm-4">Delivery</dt>
+              <dd class="col-sm-8">{{ order.delivery_date|date:"M d, Y" }}</dd>
+
+              <dt class="col-sm-4">Load Total</dt>
+              <dd class="col-sm-8">{{ order.load_total|default:"N/A" }}</dd>
+              <dt class="col-sm-4">Load Currency</dt>
+              <dd class="col-sm-8">{{ order.load_currency|default:"N/A" }}</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- Existing Trips Card -->
+        {% if existing_trips %}
+        <div class="card smart-card">
+          <div class="card-header bg-warning text-dark">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Existing Trips</h5>
+              <span class="badge bg-dark">{{ existing_trips|length }}</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              {% for trip in existing_trips %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-1">Trip #{{ trip.trip_id }}</h6>
+                  </div>
+                  <span class="badge bg-{{ trip.get_status_color }}">
+                    {{ trip.get_status_display }}
+                  </span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

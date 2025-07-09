@@ -1,0 +1,137 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title text-center">File Upload</h3>
+          </div>
+          <div class="card-body">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+              {% csrf_token %}
+              <div class="upload-area p-5 mb-3 text-center" id="dropZone" style="border: 2px dashed #ccc; border-radius: 5px; cursor: pointer;">
+                <i class="bi bi-cloud-upload fs-1"></i>
+                <h4 class="mt-2">Drag and drop files here</h4>
+                <p class="text-muted">or</p>
+                {% bootstrap_form form %}
+              </div>
+              <div class="progress mb-3 d-none" id="uploadProgress">
+                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+              </div>
+              <div id="fileList" class="mb-3"></div>
+              {% bootstrap_button 'Upload' button_type='submit' button_class='btn-primary w-100' %}
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const dropZone = document.getElementById('dropZone')
+      const fileInput = document.getElementById('fileUpload')
+      const uploadForm = document.getElementById('uploadForm')
+      const fileList = document.getElementById('fileList')
+      const progressBar = document.getElementById('uploadProgress')
+      const progressBarInner = progressBar.querySelector('.progress-bar')
+    
+      // Prevent default drag behaviors
+      ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, preventDefaults, false)
+        document.body.addEventListener(eventName, preventDefaults, false)
+      })
+    
+      // Highlight drop zone when item is dragged over it
+      ;['dragenter', 'dragover'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, highlight, false)
+      })
+      ;['dragleave', 'drop'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, unhighlight, false)
+      })
+    
+      // Handle dropped files
+      dropZone.addEventListener('drop', handleDrop, false)
+    
+      function preventDefaults(e) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    
+      function highlight(e) {
+        dropZone.classList.add('bg-light')
+      }
+    
+      function unhighlight(e) {
+        dropZone.classList.remove('bg-light')
+      }
+    
+      function handleDrop(e) {
+        const dt = e.dataTransfer
+        const files = dt.files
+        fileInput.files = files
+        updateFileList(files)
+      }
+    
+      fileInput.addEventListener('change', function () {
+        updateFileList(this.files)
+      })
+    
+      function updateFileList(files) {
+        fileList.innerHTML = ''
+        Array.from(files).forEach((file) => {
+          const div = document.createElement('div')
+          div.className = 'alert alert-info'
+          div.textContent = `${file.name} (${formatFileSize(file.size)})`
+          fileList.appendChild(div)
+        })
+      }
+    
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes'
+        const k = 1024
+        const sizes = ['Bytes', 'KB', 'MB', 'GB']
+        const i = Math.floor(Math.log(bytes) / Math.log(k))
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+      }
+    
+      uploadForm.addEventListener('submit', function (e) {
+        e.preventDefault()
+        const formData = new FormData(this)
+    
+        progressBar.classList.remove('d-none')
+        progressBarInner.style.width = '0%'
+    
+        fetch('/upload/', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          }
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert('Upload successful!')
+              uploadForm.reset()
+              fileList.innerHTML = ''
+            } else {
+              alert('Upload failed!')
+            }
+          })
+          .catch((error) => {
+            console.error('Error:', error)
+            alert('An error occurred during upload')
+          })
+          .finally(() => {
+            progressBar.classList.add('d-none')
+          })
+      })
+    })
+  </script>
+{% endblock %}

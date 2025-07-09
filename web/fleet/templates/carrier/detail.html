@@ -1,0 +1,340 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- Messages/Alerts -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Header section with actions -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Carrier Details: {{ carrier.name }}</h2>
+    <div class="btn-group">
+      <a href="{% url 'fleet:carrier-update' carrier.id %}" class="btn btn-primary">
+        <i class="fas fa-edit me-1"></i> Edit Carrier
+      </a>
+      <a href="{% url 'fleet:carrier-list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <!-- Carrier status banner -->
+  <div class="card mb-4">
+    <div class="card-body bg-light">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">{{ carrier.legal_name }}</h2>
+        <span class="badge {% if carrier.is_active %}bg-success{% else %}bg-secondary{% endif %} p-2">
+          {% if carrier.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Basic Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-building me-2"></i>Basic Information</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">Name:</th>
+              <td>{{ carrier.name }}</td>
+            </tr>
+            <tr>
+              <th>Legal Name:</th>
+              <td>{{ carrier.legal_name }}</td>
+            </tr>
+            <tr>
+              <th>Description:</th>
+              <td>{{ carrier.notes|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>Status:</th>
+              <td>
+                <span class="badge {% if carrier.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                  {% if carrier.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-address-book me-2"></i>Contact Information</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">Email:</th>
+              <td>
+                {% if carrier.email %}
+                  <a href="mailto:{{ carrier.email }}">{{ carrier.email }}</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <th>Phone:</th>
+              <td>
+                {% if carrier.phone %}
+                  <a href="tel:{{ carrier.phone }}">{{ carrier.phone }}</a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+            <!-- <tr>
+              <th>Fax:</th>
+              <td>{{ carrier.fax|default:'—' }}</td>
+            </tr> -->
+            <tr>
+              <th>Website:</th>
+              <td>
+                {% if carrier.website %}
+                  <a href="{{ carrier.website }}" target="_blank" rel="noopener noreferrer">
+                    {{ carrier.website }}
+                  </a>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legal Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Legal Information</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">DOT Number:</th>
+              <td>{{ carrier.dot_number|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>MC Number:</th>
+              <td>{{ carrier.mc_number|default:'—' }}</td>
+            </tr>
+            <!-- <tr>
+              <th>Tax ID:</th>
+              <td>{{ carrier.tax_id|default:'—' }}</td>
+            </tr> -->
+            <!-- <tr>
+              <th>Incorporation State:</th>
+              <td>{{ carrier.incorporation_state|default:'—' }}</td>
+            </tr> -->
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Address Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Address Information</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr>
+              <th style="width: 40%">Address:</th>
+              <td>{{ carrier.address|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>City:</th>
+              <td>{{ carrier.city|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>State:</th>
+              <td>{{ carrier.state|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>ZIP Code:</th>
+              <td>{{ carrier.zip_code|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th>Country:</th>
+              <td>{{ carrier.country|default:'—' }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fleet Information -->
+    <div class="col-md-12 mb-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Fleet Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6>Trucks ({{ carrier.trucks.count }})</h6>
+              {% if carrier.trucks.exists %}
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Unit Number</th>
+                        <th>Make/Model</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for truck in carrier.trucks.all %}
+                        <tr>
+                          <td>{{ truck.unit }}</td>
+                          <td>{{ truck.make }} {{ truck.model }}</td>
+                          <td>
+                            <span class="badge {% if truck.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">
+                              {% if truck.status == 'active' %}Active{% else %}Inactive{% endif %}
+                            </span>
+                          </td>
+                          <td>
+                            <a href="{% url 'fleet:truck-detail' truck.id %}" class="btn btn-sm btn-info">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <p class="text-muted">No trucks assigned to this carrier.</p>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <h6>Drivers ({{ carrier.driver_set.count|default:0 }})</h6>
+              {% if carrier.driver_set.exists %}
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>License</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for driver in carrier.driver_set.all %}
+                        <tr>
+                          <td>{{ driver.first_name }} {{ driver.last_name }}</td>
+                          <td>{{ driver.license_number|default:'—' }}</td>
+                          <td>
+                            <span class="badge {% if driver.has_active_assignment %}bg-success{% else %}bg-secondary{% endif %}">
+                              {% if driver.has_active_assignment %}Assigned{% else %}Available{% endif %}
+                            </span>
+                          </td>
+                          <td>
+                            <a href="{% url 'fleet:driver-detail' driver.id %}" class="btn btn-sm btn-info">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <p class="text-muted">No drivers assigned to this carrier.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action buttons at bottom -->
+  <div class="d-flex gap-2 mb-4">
+    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteCarrierModal">
+      <i class="fas fa-trash me-1"></i> Delete Carrier
+    </button>
+  </div>
+
+  <!-- Delete Modal -->
+  <div class="modal fade" id="deleteCarrierModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Deletion</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete carrier <strong>{{ carrier.name }}</strong>?</p>
+          <p class="text-danger">This action cannot be undone.</p>
+          {% if carrier.driver_set.exists or carrier.trucks.exists %}
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Warning:</strong> This carrier has associated drivers and/or trucks. Deleting it will affect these relationships.
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <form action="{% url 'fleet:carrier-delete' carrier.id %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+}
+
+.table td {
+  color: #212529;
+}
+
+.table-sm {
+  font-size: 0.875rem;
+}
+</style>
+{% endblock %}

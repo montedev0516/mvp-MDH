@@ -1,0 +1,15 @@
+data
+letsencrypt
+tmp
+
+*.env
+*.env*
+*.pdf
+!swagger.json
+.venv
+
+notebooks
+*.db
+!.env.example
+*.json
+*.log

@@ -1,0 +1,137 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h3>Trips</h3>
+          {% if order %}
+          <p class="text-muted mb-0">Order #{{ order.order_number }}</p>
+          {% endif %}
+        </div>
+        <div>
+          {% if order %}
+          <a href="{% url 'dispatch:trip_create' order_id=order.pk %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Add Trip
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <form method="get" class="card smart-card">
+        <div class="card-body">
+          <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search trips..." value="{{ search_query }}">
+            <button class="btn btn-primary" type="submit">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Trips Table -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card smart-card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Order #</th>
+                  <th>Origin</th>
+                  <th>Destination</th>
+                  <th>Pickup Date</th>
+                  <th>Delivery Date</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for trip in trips %}
+                <tr>
+                  <td>
+                    <a href="{% url 'dispatch:order_detail' pk=trip.order.pk %}">
+                      {{ trip.order.order_number|default:"N/A" }}
+                    </a>
+                  </td>
+                  <td>{{ trip.order.origin|default:"N/A" }}</td>
+                  <td>{{ trip.order.destination|default:"N/A" }}</td>
+                  <td>{{ trip.order.pickup_date|date:"Y-m-d"|default:"N/A" }}</td>
+                  <td>{{ trip.order.delivery_date|date:"Y-m-d"|default:"N/A" }}</td>
+                  <td>
+                    <span class="badge bg-{{ trip.get_status_color }}">
+                      {{ trip.get_status_display }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <a href="{% url 'dispatch:trip_edit' pk=trip.pk %}" class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-4">
+                    <div class="text-muted">
+                      <i class="fas fa-inbox fa-2x mb-3"></i>
+                      <p class="mb-0">No trips found</p>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if is_paginated %}
+  <div class="row mt-4">
+    <div class="col-12">
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">
+              Previous
+            </a>
+          </li>
+          {% endif %}
+
+          {% for num in page_obj.paginator.page_range %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}">
+              {{ num }}
+            </a>
+          </li>
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">
+              Next
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

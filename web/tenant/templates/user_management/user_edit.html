@@ -1,0 +1,61 @@
+{# templates/user_management/user_edit.html #}
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+{% block content %}
+  <div class="container mt-4">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title mb-0">Edit User</h3>
+          </div>
+          <div class="card-body">
+            <form method="post">
+              {% csrf_token %}
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  {% bootstrap_field form.username %}
+                </div>
+                <div class="col-md-6">
+                  {% bootstrap_field form.email %}
+                </div>
+              </div>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  {% bootstrap_field form.first_name %}
+                </div>
+                <div class="col-md-6">
+                  {% bootstrap_field form.last_name %}
+                </div>
+              </div>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  {% bootstrap_field form.role %}
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check mt-4">
+                    {% bootstrap_field form.is_active %}
+                  </div>
+                </div>
+              </div>
+              {% if request.user.profile.role == 'super_admin' %}
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    {% bootstrap_field form.new_password %}
+                  </div>
+                  <div class="col-md-6">
+                    {% bootstrap_field form.confirm_password %}
+                  </div>
+                </div>
+              {% endif %}
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'tenant:user_list' %}" class="btn btn-secondary">Back to List</a>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

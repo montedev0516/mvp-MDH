@@ -1,0 +1,15 @@
+{% load django_bootstrap5 %}
+
+<span class="badge bg-{{ record.get_status_color }} text-white">
+    <i class="fas fa-circle me-1"></i>
+    {{ record.get_status_display }}
+</span>
+
+<style>
+  .status-badge {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: 2rem;
+  }
+</style> 

@@ -1,0 +1,558 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="h3 mb-0">{% if object %}Update{% else %}Create{% endif %} Assignment</h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="post" class="needs-validation" novalidate id="assignment-form">
+            {% csrf_token %}
+            
+            <!-- Dispatch Section -->
+            {% include 'partials/section_header.html' with title="Dispatch" icon="file-alt" %}
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                {{ form.dispatch|as_crispy_field }}
+              </div>
+            </div>
+
+            <!-- Driver & Truck Section -->
+            {% include 'partials/section_header.html' with title="Driver & Truck" icon="truck" %}
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <!-- Debug info for driver field -->
+                {% if debug %}
+                <!-- <div class="debug-info"> -->
+                  <!-- <p>Driver queryset count: {{ form.driver.field.queryset.count }}</p> -->
+                  <!-- <p>Driver choices: {{ form.driver.field.choices }}</p> -->
+                <!-- </div> -->
+                {% endif %}
+                {{ form.driver|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                <!-- Debug info for truck field -->
+                {% if debug %}
+                <!-- <div class="debug-info"> -->
+                  <!-- <p>Truck queryset count: {{ form.truck.field.queryset.count }}</p> -->
+                  <!-- <p>Truck choices: {{ form.truck.field.choices }}</p> -->
+                <!-- </div> -->
+                {% endif %}
+                {{ form.truck|as_crispy_field }}
+              </div>
+            </div>
+
+            <!-- Assignment Details Section -->
+            {% include 'partials/section_header.html' with title="Assignment Details" icon="calendar" %}
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                {{ form.start_date|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.end_date|as_crispy_field }}
+              </div>
+            </div>
+
+            <!-- Additional Information Section -->
+            {% include 'partials/section_header.html' with title="Additional Information" icon="info-circle" %}
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                {{ form.status|as_crispy_field }}
+              </div>
+              <div class="col-12">
+            {{ form.notes|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.odometer_start|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.odometer_end|as_crispy_field }}
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Update{% else %}Create{% endif %} Assignment
+                </button>
+                <a href="{% url 'dispatch:assignment-list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <!-- Assignment Info Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-info-circle me-2"></i>Assignment Info
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if object %}
+            <dl class="row mb-0">
+              <dt class="col-sm-5">Created</dt>
+              <dd class="col-sm-7">{{ object.created_at|date:"Y-m-d H:i" }}</dd>
+              
+              <dt class="col-sm-5">Last Updated</dt>
+              <dd class="col-sm-7">{{ object.updated_at|date:"Y-m-d H:i" }}</dd>
+              
+              <dt class="col-sm-5">Status</dt>
+              <dd class="col-sm-7">
+                {% include 'partials/status_badge.html' with 
+                  status_color=object.status_color 
+                  status_text=object.get_status_display 
+                %}
+              </dd>
+            </dl>
+          {% else %}
+            <p class="text-muted mb-0">
+              <i class="fas fa-info-circle me-2"></i>
+              Fill out the form to create a new assignment.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Selected Dispatch Info Card -->
+      <div class="card shadow-sm" id="dispatch-info-card" style="display: none;">
+        <div class="card-header bg-light">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-file-alt me-2"></i>Selected Dispatch Info
+          </h5>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-5">Order #</dt>
+            <dd class="col-sm-7" id="dispatch-order-number">-</dd>
+
+            <dt class="col-sm-5">Driver</dt>
+            <dd class="col-sm-7" id="dispatch-driver">-</dd>
+
+            <dt class="col-sm-5">Truck</dt>
+            <dd class="col-sm-7" id="dispatch-truck">-</dd>
+
+            <dt class="col-sm-5">Carrier</dt>
+            <dd class="col-sm-7" id="dispatch-carrier">-</dd>
+
+            <dt class="col-sm-5">Start Date</dt>
+            <dd class="col-sm-7" id="dispatch-start-date">-</dd>
+
+            <dt class="col-sm-5">End Date</dt>
+            <dd class="col-sm-7" id="dispatch-end-date">-</dd>
+
+            <dt class="col-sm-5">Status</dt>
+            <dd class="col-sm-7">
+              <span class="badge" id="dispatch-status-badge">-</span>
+            </dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Validation Info Card -->
+      <div class="card shadow-sm mt-3" id="validation-info-card" style="display: none;">
+        <div class="card-header bg-info text-white">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-check-circle me-2"></i>Validation Status
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <i class="fas fa-user me-2 text-success" id="driver-status-icon"></i>
+            <span id="driver-status-text">Driver validation pending</span>
+          </div>
+          <div class="d-flex align-items-center mb-2">
+            <i class="fas fa-truck me-2 text-success" id="truck-status-icon"></i>
+            <span id="truck-status-text">Truck validation pending</span>
+          </div>
+          <div class="d-flex align-items-center mb-2">
+            <i class="fas fa-calendar me-2 text-success" id="schedule-status-icon"></i>
+            <span id="schedule-status-text">Schedule validation pending</span>
+          </div>
+          <div class="d-flex align-items-center">
+            <i class="fas fa-building me-2 text-success" id="carrier-status-icon"></i>
+            <span id="carrier-status-text">Carrier validation pending</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('assignment-form');
+    const dispatchSelect = document.getElementById('id_dispatch');
+    const driverSelect = document.getElementById('id_driver');
+    const truckSelect = document.getElementById('id_truck');
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    const statusSelect = document.getElementById('id_status');
+    const odometerStartInput = document.getElementById('id_odometer_start');
+
+    // Dispatch info elements
+    const dispatchInfoCard = document.getElementById('dispatch-info-card');
+    const dispatchOrderNumber = document.getElementById('dispatch-order-number');
+    const dispatchDriver = document.getElementById('dispatch-driver');
+    const dispatchTruck = document.getElementById('dispatch-truck');
+    const dispatchCarrier = document.getElementById('dispatch-carrier');
+    const dispatchStartDate = document.getElementById('dispatch-start-date');
+    const dispatchEndDate = document.getElementById('dispatch-end-date');
+    const dispatchStatusBadge = document.getElementById('dispatch-status-badge');
+
+    // Store dispatch date constraints
+    let dateConstraints = null;
+
+    // Function to update dispatch info card
+    function updateDispatchInfo(data) {
+        if (data.dispatch) {
+            dispatchOrderNumber.textContent = data.dispatch.order_number || '-';
+            dispatchDriver.textContent = data.dispatch.driver_name || '-';
+            dispatchTruck.textContent = data.dispatch.truck_unit || '-';
+            dispatchCarrier.textContent = data.dispatch.carrier_name || '-';
+            dispatchStartDate.textContent = data.dispatch.start_date || '-';
+            dispatchEndDate.textContent = data.dispatch.end_date || '-';
+            
+            // Update status badge
+            dispatchStatusBadge.textContent = data.dispatch.status || '-';
+            dispatchStatusBadge.className = `badge bg-${data.dispatch.status_color || 'secondary'}`;
+
+            // Show the card
+            dispatchInfoCard.style.display = 'block';
+        } else {
+            dispatchInfoCard.style.display = 'none';
+        }
+    }
+
+    // Function to validate dates
+    function validateDates() {
+        if (!dateConstraints || !dateConstraints.pickup_date) {
+            return true; // No constraints to validate against
+        }
+
+        const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+        const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+        const pickupDate = new Date(dateConstraints.pickup_date);
+        const deliveryDate = dateConstraints.delivery_date ? new Date(dateConstraints.delivery_date) : null;
+
+        let isValid = true;
+        let errorMessage = [];
+
+        if (startDate) {
+            // Start date should not be after pickup date
+            if (startDate > pickupDate) {
+                isValid = false;
+                errorMessage.push("Assignment start date cannot be after dispatch pickup date");
+                startDateInput.classList.add('is-invalid');
+            } else {
+                startDateInput.classList.remove('is-invalid');
+            }
+        }
+
+        if (endDate && deliveryDate) {
+            // End date should not be before delivery date
+            if (endDate < deliveryDate) {
+                isValid = false;
+                errorMessage.push("Assignment end date cannot be before dispatch delivery date");
+                endDateInput.classList.add('is-invalid');
+            } else {
+                endDateInput.classList.remove('is-invalid');
+            }
+        }
+
+        // Show warning message if dates are invalid
+        const warningDiv = document.getElementById('date-warning');
+        if (!isValid && errorMessage.length > 0) {
+            if (!warningDiv) {
+                const newWarningDiv = document.createElement('div');
+                newWarningDiv.id = 'date-warning';
+                newWarningDiv.className = 'alert alert-warning mt-3';
+                newWarningDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${errorMessage.join('<br>')}
+                `;
+                form.insertBefore(newWarningDiv, form.firstChild);
+            } else {
+                warningDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${errorMessage.join('<br>')}
+                `;
+            }
+        } else if (warningDiv) {
+            warningDiv.remove();
+        }
+
+        return isValid;
+    }
+
+    // Function to update driver and truck options
+    function updateDriverAndTruckOptions(data) {
+        // Clear existing options
+        driverSelect.innerHTML = '<option value="">Select Driver</option>';
+        truckSelect.innerHTML = '<option value="">Select Truck</option>';
+
+        // Add available drivers
+        data.available_drivers.forEach(driver => {
+            const option = document.createElement('option');
+            option.value = driver.id;
+            option.textContent = `${driver.first_name} ${driver.last_name}${driver.carrier ? ` (${driver.carrier})` : ''}`;
+            if (data.selected_driver === driver.id) {
+                option.selected = true;
+            }
+            driverSelect.appendChild(option);
+        });
+
+        // Add available trucks
+        data.available_trucks.forEach(truck => {
+            const option = document.createElement('option');
+            option.value = truck.id;
+            option.textContent = `${truck.unit}${truck.model ? ` (${truck.model})` : ''}`;
+            if (data.selected_truck === truck.id) {
+                option.selected = true;
+            }
+            truckSelect.appendChild(option);
+        });
+
+        // Update status if provided
+        if (data.status) {
+            statusSelect.value = data.status;
+        }
+
+        // Store date constraints
+        if (data.date_constraints) {
+            dateConstraints = data.date_constraints;
+            
+            // Set min/max dates on inputs
+            if (dateConstraints.min_start_date) {
+                startDateInput.min = dateConstraints.min_start_date;
+            }
+            if (dateConstraints.max_end_date) {
+                endDateInput.max = dateConstraints.max_end_date;
+            }
+
+            // Auto-fill dates if available
+            if (dateConstraints.pickup_date) {
+                startDateInput.value = dateConstraints.pickup_date;
+            }
+            if (dateConstraints.delivery_date) {
+                endDateInput.value = dateConstraints.delivery_date;
+            }
+
+            // Validate dates
+            validateDates();
+        }
+
+        // Update validation info
+        updateValidationInfo(data);
+    }
+
+    // Function to update validation info card
+    function updateValidationInfo(data) {
+        const validationCard = document.getElementById('validation-info-card');
+        const driverIcon = document.getElementById('driver-status-icon');
+        const driverText = document.getElementById('driver-status-text');
+        const truckIcon = document.getElementById('truck-status-icon');
+        const truckText = document.getElementById('truck-status-text');
+        const scheduleIcon = document.getElementById('schedule-status-icon');
+        const scheduleText = document.getElementById('schedule-status-text');
+        const carrierIcon = document.getElementById('carrier-status-icon');
+        const carrierText = document.getElementById('carrier-status-text');
+
+        if (data.validation_info) {
+            // Driver validation
+            if (data.available_drivers.length === 1) {
+                driverIcon.className = 'fas fa-user me-2 text-success';
+                driverText.textContent = `Driver available: ${data.available_drivers[0].first_name} ${data.available_drivers[0].last_name}`;
+            } else {
+                driverIcon.className = 'fas fa-user me-2 text-warning';
+                driverText.textContent = 'Multiple drivers available';
+            }
+
+            // Truck validation
+            if (data.available_trucks.length === 1) {
+                truckIcon.className = 'fas fa-truck me-2 text-success';
+                truckText.textContent = `Truck available: ${data.available_trucks[0].unit}`;
+            } else {
+                truckIcon.className = 'fas fa-truck me-2 text-warning';
+                truckText.textContent = 'Multiple trucks available';
+            }
+
+            // Schedule validation
+            if (data.date_constraints && data.date_constraints.pickup_date) {
+                scheduleIcon.className = 'fas fa-calendar me-2 text-success';
+                scheduleText.textContent = 'Schedule constraints applied';
+            } else {
+                scheduleIcon.className = 'fas fa-calendar me-2 text-warning';
+                scheduleText.textContent = 'No schedule constraints';
+            }
+
+            // Carrier validation
+            const driverCarrier = data.available_drivers[0]?.carrier;
+            const truckCarrier = data.available_trucks[0]?.model; // This should be carrier info
+            if (driverCarrier) {
+                carrierIcon.className = 'fas fa-building me-2 text-success';
+                carrierText.textContent = `Carrier: ${driverCarrier}`;
+            } else {
+                carrierIcon.className = 'fas fa-building me-2 text-info';
+                carrierText.textContent = 'No carrier assigned';
+            }
+
+            validationCard.style.display = 'block';
+        } else {
+            validationCard.style.display = 'none';
+        }
+    }
+
+    // Handle dispatch selection change
+    dispatchSelect.addEventListener('change', function() {
+        const dispatchId = this.value;
+        if (dispatchId) {
+            // Show loading state
+            driverSelect.innerHTML = '<option value="">Loading...</option>';
+            truckSelect.innerHTML = '<option value="">Loading...</option>';
+            driverSelect.disabled = true;
+            truckSelect.disabled = true;
+            
+            fetch(`/dispatch/assignment/get-dispatch-details/?dispatch_id=${dispatchId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || `HTTP ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        updateDriverAndTruckOptions(data);
+                        updateDispatchInfo(data);
+                        // Re-enable fields
+                        driverSelect.disabled = false;
+                        truckSelect.disabled = false;
+                        // Remove any error alerts
+                        removeErrorAlerts();
+                    } else {
+                        showErrorAlert(data.error || 'Unknown error occurred');
+                        resetFormFields();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching dispatch details:', error);
+                    showErrorAlert(error.message);
+                    resetFormFields();
+                });
+        } else {
+            // Reset form if no dispatch selected
+            resetFormFields();
+        }
+    });
+
+    // Function to show error alert
+    function showErrorAlert(message) {
+        removeErrorAlerts(); // Remove any existing alerts first
+        
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alertDiv.id = 'dispatch-error-alert';
+        alertDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Error:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        // Insert after the dispatch field
+        const dispatchField = dispatchSelect.closest('.col-12');
+        dispatchField.insertAdjacentElement('afterend', alertDiv);
+    }
+
+    // Function to remove error alerts
+    function removeErrorAlerts() {
+        const existingAlert = document.getElementById('dispatch-error-alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+    }
+
+    // Function to reset form fields
+    function resetFormFields() {
+        driverSelect.innerHTML = '<option value="">Select Driver</option>';
+        truckSelect.innerHTML = '<option value="">Select Truck</option>';
+        driverSelect.disabled = false;
+        truckSelect.disabled = false;
+        dispatchInfoCard.style.display = 'none';
+        document.getElementById('validation-info-card').style.display = 'none';
+        dateConstraints = null;
+        startDateInput.min = '';
+        endDateInput.max = '';
+        startDateInput.value = '';
+        endDateInput.value = '';
+    }
+
+    // Add date validation on date input changes
+    startDateInput.addEventListener('change', validateDates);
+    endDateInput.addEventListener('change', validateDates);
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate dates first
+        const datesValid = validateDates();
+        if (!datesValid) {
+            return;
+        }
+        
+        console.log('Form submission data:');
+        console.log('Dispatch:', dispatchSelect.value);
+        console.log('Driver:', driverSelect.value);
+        console.log('Truck:', truckSelect.value);
+        console.log('Start Date:', startDateInput.value);
+        console.log('End Date:', endDateInput.value);
+        console.log('Status:', statusSelect.value);
+        console.log('Odometer Start:', odometerStartInput.value);
+
+        // If all required fields are filled, submit the form
+        if (driverSelect.value && truckSelect.value && startDateInput.value && odometerStartInput.value) {
+            form.submit();
+        } else {
+            // Show error message for missing required fields
+            if (!driverSelect.value) {
+                driverSelect.classList.add('is-invalid');
+            }
+            if (!truckSelect.value) {
+                truckSelect.classList.add('is-invalid');
+            }
+            if (!startDateInput.value) {
+                startDateInput.classList.add('is-invalid');
+            }
+            if (!odometerStartInput.value) {
+                odometerStartInput.classList.add('is-invalid');
+            }
+        }
+    });
+
+    // Remove invalid class when field is filled
+    [driverSelect, truckSelect, startDateInput, odometerStartInput].forEach(field => {
+        field.addEventListener('change', function() {
+            if (this.value) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+  });
+</script>
+{% endblock %} 

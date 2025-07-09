@@ -1,0 +1,241 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <div>
+        <h1 class="h3 mb-1">{% if object %}Update{% else %}Create{% endif %} Order</h1>
+        {% if object %}
+          <p class="text-muted mb-0">Order #{{ object.order_number }}</p>
+        {% endif %}
+      </div>
+      {% if object %}
+        {% include 'partials/status_badge.html' with 
+          status_color=object.status_color 
+          status_text=object.get_status_display 
+        %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Form Column -->
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          {% include 'partials/form_base.html' with form_id="order-form" multipart=True %}
+          {% block form_content %}
+            {% include 'partials/section_header.html' with title="Customer Information" icon="user" %}
+            
+            {{ form.customer_name|as_crispy_field }}
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ form.customer_email|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.customer_phone|as_crispy_field }}
+              </div>
+            </div>
+
+            {% include 'partials/section_header.html' with title="Order Details" icon="box" %}
+            
+            {{ form.order_number|as_crispy_field }}
+            {{ form.cargo_type|as_crispy_field }}
+            {{ form.cargo_weight|as_crispy_field }}
+            {{ form.cargo_volume|as_crispy_field }}
+
+            {% include 'partials/section_header.html' with title="Locations & Dates" icon="map-marker-alt" %}
+            
+            {{ form.origin|as_crispy_field }}
+            {{ form.destination|as_crispy_field }}
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ form.pickup_date|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.delivery_date|as_crispy_field }}
+              </div>
+            </div>
+
+            {% include 'partials/section_header.html' with title="Financial Information" icon="dollar-sign" %}
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ form.load_total|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.currency|as_crispy_field }}
+              </div>
+            </div>
+
+            {% include 'partials/section_header.html' with title="Additional Information" icon="info-circle" %}
+            
+            {{ form.remarks_or_special_instructions|as_crispy_field }}
+            {{ form.status|as_crispy_field }}
+          {% endblock %}
+        </div>
+      </div>
+
+      {% if object %}
+        <!-- History Section -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            {% include 'partials/section_header.html' with title="History" icon="history" %}
+            
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Created At</dt>
+              <dd class="col-sm-8">{{ object.created_at|date:'F j, Y H:i' }}</dd>
+              
+              <dt class="col-sm-4">Last Updated</dt>
+              <dd class="col-sm-8">{{ object.updated_at|date:'F j, Y H:i' }}</dd>
+              
+              <dt class="col-sm-4">Current Status</dt>
+              <dd class="col-sm-8">
+                {% include 'partials/status_badge.html' with 
+                  status_color=object.status_color 
+                  status_text=object.get_status_display 
+                %}
+              </dd>
+            </dl>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- PDF Upload and Preview Column -->
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body p-0">
+          <!-- File Upload Area -->
+          <div id="upload-section" class="p-4" {% if pdf_url %}style="display: none;"{% endif %}>
+            <form method="post" enctype="multipart/form-data" id="upload-form">
+              {% csrf_token %}
+              {% bootstrap_form upload_form layout='floating' %}
+              {% bootstrap_button button_type="submit" content="Upload & Process" button_class="btn-primary w-100" %}
+            </form>
+          </div>
+
+          <!-- PDF Preview Area -->
+          <div id="preview-section" {% if not pdf_url %}style="display: none;"{% endif %}>
+            {% include 'partials/pdf_viewer.html' with 
+              pdf_url=pdf_url 
+              container_id='order-pdf-viewer'
+              show_change_button=True
+              no_pdf_message='Upload a PDF file to view and process it.'
+            %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('order-form');
+    const uploadForm = document.getElementById('upload-form');
+    const uploadSection = document.getElementById('upload-section');
+    const previewSection = document.getElementById('preview-section');
+    const pickupDateInput = document.getElementById('id_pickup_date');
+    const deliveryDateInput = document.getElementById('id_delivery_date');
+
+    // Date validation
+    function validateDates() {
+      if (pickupDateInput.value && deliveryDateInput.value) {
+        const pickupDate = new Date(pickupDateInput.value);
+        const deliveryDate = new Date(deliveryDateInput.value);
+        
+        if (deliveryDate < pickupDate) {
+          deliveryDateInput.setCustomValidity('Delivery date must be after pickup date');
+        } else {
+          deliveryDateInput.setCustomValidity('');
+        }
+      }
+    }
+
+    // Add event listeners for date validation
+    if (pickupDateInput && deliveryDateInput) {
+      [pickupDateInput, deliveryDateInput].forEach(input => {
+        input.addEventListener('change', validateDates);
+      });
+    }
+
+    // Handle file upload form submission
+    if (uploadForm) {
+      uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        try {
+          const formData = new FormData(uploadForm);
+          const response = await fetch('/dispatch/api/orders/upload-document/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+          });
+
+          if (!response.ok) throw new Error('Upload failed');
+          
+          const data = await response.json();
+          
+          // Update UI
+          uploadSection.style.display = 'none';
+          previewSection.style.display = 'block';
+          
+          // Update form fields with extracted data
+          if (data.extracted_data) {
+            Object.entries(data.extracted_data).forEach(([field, value]) => {
+              const input = document.getElementById(`id_${field}`);
+              if (input) input.value = value;
+            });
+          }
+          
+          // Show success message
+          showMessage('Document uploaded and processed successfully', 'success');
+        } catch (error) {
+          console.error('Upload error:', error);
+          showMessage('Failed to upload document. Please try again.', 'danger');
+        }
+      });
+    }
+
+    // Handle change file button
+    document.getElementById('change-file')?.addEventListener('click', function() {
+      previewSection.style.display = 'none';
+      uploadSection.style.display = 'block';
+    });
+
+    function showMessage(message, type = 'info') {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+      alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      form.insertBefore(alertDiv, form.firstChild);
+      
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        alertDiv.remove();
+      }, 5000);
+    }
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+  });
+</script>
+{% endblock %} 

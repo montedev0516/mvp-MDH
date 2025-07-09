@@ -1,0 +1,126 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <div class="container mt-4">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="mb-0">
+            {% if license %}
+              Update Driver License
+            {% else %}
+              Add New Driver License
+            {% endif %}
+          </h2>
+          <div class="btn-group">
+            <a href="{% url 'fleet:driver-license-list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-1"></i> Back to List
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          
+          <div class="row">
+            <!-- Personal Information -->
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header bg-primary text-white">
+                  <h5 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h5>
+                </div>
+                <div class="card-body">
+                  <div class="required-field">{{ form.name|as_crispy_field }}</div>
+                  <div class="required-field">{{ form.license_number|as_crispy_field }}</div>
+                  {{ form.date_of_birth|as_crispy_field }}
+                  {{ form.gender|as_crispy_field }}
+                </div>
+              </div>
+            </div>
+
+            <!-- License Details -->
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header bg-primary text-white">
+                  <h5 class="mb-0"><i class="fas fa-id-card me-2"></i>License Details</h5>
+                </div>
+                <div class="card-body">
+                  {{ form.issued_date|as_crispy_field }}
+                  {{ form.expiry_date|as_crispy_field }}
+                  {{ form.license_type|as_crispy_field }}
+                  {{ form.license_class|as_crispy_field }}
+                  {{ form.conditions|as_crispy_field }}
+                  {{ form.public_safety_commission|as_crispy_field }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Address Information -->
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header bg-primary text-white">
+                  <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Address Information</h5>
+                </div>
+                <div class="card-body">
+                  {{ form.address|as_crispy_field }}
+                  {{ form.country|as_crispy_field }}
+                  {{ form.province|as_crispy_field }}
+                  {{ form.state|as_crispy_field }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i>
+              {% if license %}
+                Save Changes
+              {% else %}
+                Create License
+              {% endif %}
+            </button>
+            {% if license %}
+              <a href="{% url 'fleet:driver-license-detail' license.id %}" class="btn btn-secondary">Cancel</a>
+            {% else %}
+              <a href="{% url 'fleet:driver-license-list' %}" class="btn btn-secondary">Cancel</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.required-field .control-label::after {
+  content: " *";
+  color: red;
+}
+
+.required-field .form-text {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %} 

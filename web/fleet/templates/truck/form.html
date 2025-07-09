@@ -1,0 +1,202 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- Messages/Alerts -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">
+          {% if truck %}
+            Update Truck: {{ truck.unit }}
+          {% else %}
+            Add New Truck
+          {% endif %}
+        </h2>
+        <div class="btn-group">
+          <a href="{% url 'fleet:truck-list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to List
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <form method="post" id="truckForm" novalidate>
+        {% csrf_token %}
+
+        <!-- Required Fields Alert -->
+        <div class="alert alert-info mb-4">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Required Fields:</strong> Unit Number, VIN, Make, Model, and Carrier are required.
+        </div>
+
+        <div class="row">
+          <!-- Basic Information -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Basic Information</h5>
+              </div>
+              <div class="card-body">
+                <div class="required-field">{{ form.unit|as_crispy_field }}</div>
+                <div class="required-field">{{ form.vin|as_crispy_field }}</div>
+                <div class="required-field">{{ form.make|as_crispy_field }}</div>
+                <div class="required-field">{{ form.model|as_crispy_field }}</div>
+                {{ form.year|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Ownership Details -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-file-contract me-2"></i>Ownership Details</h5>
+              </div>
+              <div class="card-body">
+                <div class="required-field">{{ form.carrier|as_crispy_field }}</div>
+                {{ form.ownership_type|as_crispy_field }}
+                {{ form.value|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Registration Details -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Registration Details</h5>
+              </div>
+              <div class="card-body">
+                {{ form.plate|as_crispy_field }}
+                {{ form.registration|as_crispy_field }}
+                {{ form.state|as_crispy_field }}
+                {{ form.country|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Details -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Additional Details</h5>
+              </div>
+              <div class="card-body">
+                {{ form.tracking|as_crispy_field }}
+                {{ form.weight|as_crispy_field }}
+                {{ form.capacity|as_crispy_field }}
+                {{ form.status|as_crispy_field }}
+                {{ form.is_active|as_crispy_field }}
+                {{ form.notes|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Trailer Information -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-trailer me-2"></i>Trailer Information</h5>
+              </div>
+              <div class="card-body">
+                {{ form.is_trailer|as_crispy_field }}
+                {{ form.trailer_number|as_crispy_field }}
+                {{ form.trailer_capacity|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Fuel Information -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-gas-pump me-2"></i>Fuel Information</h5>
+              </div>
+              <div class="card-body">
+                {{ form.company_pays_fuel_cost|as_crispy_field }}
+                {{ form.all_fuel_toll_cards|as_crispy_field }}
+                {{ form.ifta_group|as_crispy_field }}
+                {{ form.terminal|as_crispy_field }}
+                {{ form.tour|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            {% if truck %}
+              Save Changes
+            {% else %}
+              Create Truck
+            {% endif %}
+          </button>
+          {% if truck %}
+            <a href="{% url 'fleet:truck-detail' truck.id %}" class="btn btn-secondary">Cancel</a>
+          {% else %}
+            <a href="{% url 'fleet:truck-list' %}" class="btn btn-secondary">Cancel</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.required-field .control-label::after {
+  content: " *";
+  color: red;
+}
+
+.required-field .form-text {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // VIN validation
+  const vinField = document.querySelector('#id_vin');
+  if (vinField) {
+    vinField.addEventListener('input', function() {
+      this.value = this.value.toUpperCase();
+    });
+  }
+});
+</script>
+{% endblock %}

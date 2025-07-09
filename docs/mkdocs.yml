@@ -1,0 +1,13 @@
+site_name: MyDispatchHub.com Docs
+
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Overview: overview.md
+  - App Docs: apps.md
+  - Configuration and Deployment: config-and-deployment.md
+  - Cross Cutting Concerns: cross-cutting-concerns.md
+  - Advance Usage and Dev Onboarding: advance-usage-dev-onboarding.md
+  - Logging: logging.md
+  - Help: mkdocs-help.md

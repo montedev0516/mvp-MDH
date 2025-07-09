@@ -1,0 +1,954 @@
+{% extends 'layout/base.html' %}
+{% load django_tables2 %}
+
+{% block extra_head %}
+  <!-- Remove PDF.js includes since we're using iframe -->
+{% endblock %}
+
+{% block style %}
+  <style>
+    /* Base Form Styles */
+    .form-control {
+      border: 1px solid #ced4da;
+      border-radius: 0.375rem;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .form-control:focus {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    /* Read-only and Disabled States */
+    .readonly-select {
+      pointer-events: none;
+      background-color: #e9ecef !important;
+      opacity: 1 !important;
+      border-color: #ced4da !important;
+    }
+
+    input[readonly],
+    select[disabled] {
+      background-color: #e9ecef !important;
+      cursor: not-allowed !important;
+      border-color: #ced4da !important;
+      opacity: 1 !important;
+    }
+
+    /* Non-editable Form States */
+    .non-editable-form input:not([type='hidden']):not([readonly='readonly']),
+    .non-editable-form select:not([disabled='disabled']),
+    .non-editable-form textarea:not([readonly='readonly']) {
+      background-color: #e9ecef !important;
+      pointer-events: none !important;
+      border-color: #ced4da !important;
+      opacity: 1 !important;
+    }
+
+    /* Required Field Indicators */
+    .required label::after {
+      content: ' *';
+      color: #dc3545;
+    }
+
+
+    /* Status Banner */
+    .status-banner {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Form Section Styles */
+    .form-section {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background-color: #fff;
+      border-radius: 0.375rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-section:hover {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .form-section-header {
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #dee2e6;
+      color: #495057;
+      font-weight: 600;
+    }
+
+    /* Field Validation States */
+    .is-invalid {
+      border-color: #dc3545 !important;
+      padding-right: calc(1.5em + 0.75rem) !important;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e") !important;
+      background-repeat: no-repeat !important;
+      background-position: right calc(0.375em + 0.1875rem) center !important;
+      background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem) !important;
+    }
+
+    .invalid-feedback {
+      display: none;
+      width: 100%;
+      margin-top: 0.25rem;
+      font-size: 0.875em;
+      color: #dc3545;
+    }
+
+    /* Help Text Styling */
+    .form-text {
+      margin-top: 0.25rem;
+      font-size: 0.875em;
+      color: #6c757d;
+    }
+
+    /* Row container for equal height columns */
+    .row {
+      display: flex;
+      align-items: stretch;
+      flex-direction: row;
+      min-height: calc(100vh - 150px);
+    }
+
+    .col-md-6 {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* Scrollable content area for left column */
+    .scrollable-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+      max-height: calc(100vh - 180px);
+    }
+
+    /* Custom scrollbar for webkit browsers */
+    .scrollable-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    /* PDF Section Styles */
+    .pdf-sidebar {
+      height: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pdf-sidebar .card {
+      flex: 1;
+      border: 1px solid #dee2e6;
+      box-shadow: 0 4px 8px rgba(155, 75, 75, 0.1);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .card {
+      height: 100%;
+    }
+
+    .pdf-sidebar .card-header {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-bottom: 1px solid #dee2e6;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .pdf-sidebar .card-body {
+      flex: 1;
+      min-height: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 220px);
+    }
+
+    .pdf-sidebar .card-header .card-title {
+      color: #495057;
+      font-size: 1rem;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pdf-sidebar .card-header .card-title::before {
+      content: "📄";
+      font-size: 1.1rem;
+  
+    }
+
+    .pdf-controls {
+      gap: 2px;
+    }
+
+    .pdf-controls .btn {
+      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      min-width: 32px;
+    }
+
+    .pdf-viewer-container {
+      height: 100%;
+      flex: 1;
+      position: relative;
+      background: #f8f9fa;
+      overflow: hidden;
+      min-height: calc(100vh - 250px);
+    }
+
+    .pdf-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+      display: none;
+      transition: transform 0.3s ease;
+      min-height: calc(100vh - 250px);
+    }
+
+    .pdf-iframe.loaded {
+      display: block;
+    }
+
+    .pdf-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(248, 249, 250, 0.95);
+      color: #6c757d;
+      font-size: 0.9rem;
+      z-index: 10;
+    }
+
+    .no-pdf-container {
+      height: 100%;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      min-height: calc(100vh - 250px);
+    }
+
+    .no-pdf-message {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .no-pdf-message .pdf-icon {
+      font-size: 4rem;
+      color: #6c757d;
+      margin-bottom: 1rem;
+      opacity: 0.7;
+    }
+
+    .no-pdf-message h4 {
+      color: #495057;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .no-pdf-message p {
+      color: #6c757d;
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .fallback-content {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Fullscreen PDF Viewer */
+    .pdf-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
+      background: #000;
+    }
+
+    .pdf-fullscreen .pdf-iframe {
+      width: 100%;
+      height: 100%;
+    }
+
+    .pdf-fullscreen-exit {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .pdf-fullscreen-exit:hover {
+      background: rgba(220, 53, 69, 0.8);
+      transform: scale(1.1);
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .row {
+        min-height: auto;
+        flex-direction: column;
+      }
+
+      .scrollable-content {
+        height: auto;
+        min-height: 400px;
+        max-height: 50vh;
+        overflow-y: auto;
+      }
+
+      .pdf-sidebar {
+        height: 50vh;
+        min-height: 500px;
+        margin-top: 1rem;
+      }
+
+      .pdf-sidebar .card-body {
+        height: calc(50vh - 80px);
+      }
+
+      .pdf-viewer-container,
+      .pdf-iframe,
+      .no-pdf-container {
+        min-height: calc(50vh - 120px);
+      }
+
+      .pdf-controls .btn {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.75rem;
+        min-width: 28px;
+      }
+
+      .pdf-sidebar .card-header {
+        padding: 0.5rem 0.75rem;
+      }
+
+      .pdf-sidebar .card-header .card-title {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .scrollable-content {
+        max-height: calc(100vh - 200px);
+      }
+
+      .pdf-sidebar {
+        height: calc(100vh - 180px);
+        min-height: 700px;
+      }
+
+      .pdf-sidebar .card-body {
+        height: calc(100vh - 250px);
+      }
+
+      .pdf-viewer-container,
+      .pdf-iframe,
+      .no-pdf-container {
+        min-height: calc(100vh - 280px);
+      }
+    }
+
+    @media (min-width: 1025px) {
+      .scrollable-content {
+        max-height: calc(100vh - 180px);
+      }
+
+      .pdf-sidebar {
+        height: calc(100vh - 150px);
+        min-height: 800px;
+      }
+
+      .pdf-sidebar .card-body {
+        height: calc(100vh - 220px);
+      }
+
+      .pdf-viewer-container,
+      .pdf-iframe,
+      .no-pdf-container {
+        min-height: calc(100vh - 250px);
+      }
+    }
+
+    /* Enhanced hover effects */
+    .card:hover {
+      transform: translateY(-2px);
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      transition: all 0.2s ease;
+    }
+
+    .pdf-controls .btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* Currency and Number Input Styling */
+    input[type='number'] {
+      text-align: right;
+      padding-right: 0.5rem;
+    }
+
+    /* Phone Number Input Styling */
+    input[type='tel'] {
+      letter-spacing: 0.5px;
+    }
+
+    /* DateTime Input Styling */
+    input[type='datetime-local'] {
+      padding: 0.375rem 0.75rem;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid wide py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <h1 class="h3 mb-1">Order Details</h1>
+        <h2 class="h5 text-muted">Order #{{ order.order_number }}</h2>
+      </div>
+    </div>
+    <div class="row">
+      <!-- Main Content Section -->
+      <div class="col-md-6">
+        <div class="scrollable-content">
+          <!-- Customer Information Card -->
+          <div class="card shadow-sm mb-4" style="height: 100%;">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title mb-0">Order Information</h5>
+                {% if not order.processed %}
+                  <a href="{% url 'dispatch:order_edit' order.pk %}" class="btn btn-secondary btn-sm"><i class="fas fa-edit me-1"></i>Edit Order Info</a>
+                {% endif %}
+              </div>
+              <div class="customer-info">
+                <div class="row g-3">
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Order Number:</span>
+                      <span class="info-value">{{ order.order_number }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Status:</span>
+                      <span class="info-value">{{ order.get_status_display }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Pickup Date:</span>
+                      <span class="info-value">{{ order.pickup_date|date:"M d, Y" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Delivery Date:</span>
+                      <span class="info-value">{{ order.delivery_date|date:"M d, Y" }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Origin:</span>
+                      <span class="info-value">{{ order.origin }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Destination:</span>
+                      <span class="info-value">{{ order.destination }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Cargo Type:</span>
+                      <span class="info-value">{{ order.cargo_type }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Weight:</span>
+                      <span class="info-value">{{ order.weight }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Load Total:</span>
+                      <span class="info-value">{{ order.load_total }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Load Currency:</span>
+                      <span class="info-value">{{ order.load_currency }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Name:</span>
+                      <span class="info-value">{{ order.customer_name }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Email:</span>
+                      <span class="info-value">{{ order.customer_email }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Phone:</span>
+                      <span class="info-value">{{ order.customer_phone }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Address:</span>
+                      <span class="info-value">{{ order.customer_address }}</span>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="info-item">
+                      <span class="info-label fw-bold">Special Instructions:</span>
+                      <span class="info-value">{{ order.remarks_or_special_instructions }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trips Card -->
+          <div class="card shadow-sm mb-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title mb-0">Trips</h5>
+                {% if not order.processed %}
+                  <a href="{% url 'dispatch:order_trip_create' order_id=order.pk %}" class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i>Add Trip</a>
+                {% endif %}
+              </div>
+
+              {% if not trips_complete %}
+                <div class="alert alert-warning mb-3" role="alert">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  {% if not table.rows %}
+                    No trips have been added to this order. Please add at least one trip before creating a dispatch.
+                  {% else %}
+                    Some trip details are incomplete. Please ensure all required fields are filled out for each trip before creating a dispatch.
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              <div class="table-responsive">
+                {% render_table table %}
+              </div>
+
+              <!-- Delete Modals for Trips -->
+              {% for trip in table.data %}
+                <div class="modal fade" id="deleteModal{{ trip.pk }}" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Confirm Trip Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>Are you sure you want to delete this trip?</p>
+                        <ul class="list-unstyled">
+                          <li><strong>Origin:</strong> {{ trip.order.origin }}</li>
+                          <li><strong>Destination:</strong> {{ trip.order.destination }}</li>
+                        </ul>
+                        <p class="text-danger">This action cannot be undone.</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form action="{% url 'dispatch:trip_delete' pk=trip.pk %}" method="post" style="display: inline;">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-danger">Delete Trip</button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons d-flex gap-2 mb-4">
+            {% if not order.processed %}
+              {% if trips_complete %}
+                <a href="{% url 'dispatch:dispatch_create' order_pk=order.pk %}" class="btn btn-success"><i class="fas fa-truck me-1"></i>Create Dispatch</a>
+              {% else %}
+                <button class="btn btn-success" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Complete all trip details before creating dispatch"><i class="fas fa-truck me-1"></i>Create Dispatch</button>
+              {% endif %}
+            {% else %}
+              <button class="btn btn-success" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Order has already been processed"><i class="fas fa-truck me-1"></i>Create Dispatch</button>
+              {% if dispatch %}
+                <a href="{% url 'dispatch:dispatch_detail' pk=dispatch.pk %}" class="btn btn-info"><i class="fas fa-eye me-1"></i>View Dispatch</a>
+              {% endif %}
+            {% endif %}
+            <a href="{% url 'dispatch:order_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Back to List</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF Section -->
+      <div class="col-md-6">
+        <div class="pdf-sidebar" style="height: 100%;">
+            <div class="card-body p-0 position-relative" style="height: 100%;">
+              <div class="card shadow-sm" style="height: 100%;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Order Document</h5>
+              {% if has_pdf and pdf_url %}
+                <div class="pdf-controls btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary" onclick="zoomOut()" title="Zoom Out">
+                    <i class="fas fa-search-minus"></i>
+                  </button>
+                  <button class="btn btn-outline-secondary" onclick="resetZoom()" title="Reset Zoom">
+                    <span id="zoomLevel">100%</span>
+                  </button>
+                  <button class="btn btn-outline-secondary" onclick="zoomIn()" title="Zoom In">
+                    <i class="fas fa-search-plus"></i>
+                  </button>
+                  <button class="btn btn-outline-primary" onclick="toggleFullscreen()" title="Fullscreen">
+                    <i class="fas fa-expand"></i>
+                  </button>
+                  <a href="{{ pdf_url }}" target="_blank" class="btn btn-outline-success" title="Open in new tab">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+            <div class="card-body p-0 position-relative" style="height: 100%;">
+              {% if has_pdf and pdf_url %}
+                <div class="pdf-viewer-container" id="pdfViewerContainer" style="height: 100%;">
+                  <div class="pdf-loading" id="pdfLoading">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading PDF...</span>
+                    </div>
+                    <div class="mt-2">Loading document...</div>
+                  </div>
+                  <iframe 
+                    id="pdfIframe"
+                    src="{{ pdf_url }}#toolbar=1&navpanes=1&scrollbar=1&view=FitH"
+                    class="pdf-iframe"
+                    title="Order #{{ order.order_number }} Document"
+                    frameborder="0"
+                    allowfullscreen
+                    style="height: 100%; width: 100%;"
+                    onload="hidePdfLoading()"
+                    onerror="showPdfError()">
+                    <div class="fallback-content p-4 text-center">
+                      <h5>PDF Viewer Not Supported</h5>
+                      <p>Your browser doesn't support embedded PDFs.</p>
+                      <a href="{{ pdf_url }}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-external-link-alt me-2"></i>Open PDF in New Tab
+                      </a>
+                    </div>
+                  </iframe>
+                </div>
+              {% else %}
+                <div class="no-pdf-container">
+                  <div class="no-pdf-message">
+                    <div class="pdf-icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h4>No Document Available</h4>
+                    <p>This order doesn't have an associated PDF document.</p>
+                    <div class="mt-3">
+                      <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Documents are generated when orders are processed from uploaded files.
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    // PDF Viewer State
+    let currentZoom = 100;
+    let isFullscreen = false;
+
+    // PDF Management Functions
+    function showPdfLoading() {
+      const loading = document.getElementById('pdfLoading');
+      const iframe = document.getElementById('pdfIframe');
+      if (loading && iframe) {
+        loading.style.display = 'flex';
+        iframe.classList.remove('loaded');
+      }
+    }
+
+    function hidePdfLoading() {
+      const loading = document.getElementById('pdfLoading');
+      const iframe = document.getElementById('pdfIframe');
+      if (loading && iframe) {
+        loading.style.display = 'none';
+        iframe.classList.add('loaded');
+      }
+    }
+
+    function showPdfError() {
+      const container = document.getElementById('pdfViewerContainer');
+      if (container) {
+        container.innerHTML = `
+          <div class="no-pdf-container">
+            <div class="no-pdf-message">
+              <div class="pdf-icon">
+                <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+              </div>
+              <h4 style="color: #dc3545;">Error Loading PDF</h4>
+              <p>Unable to load the PDF document. Please try opening in a new tab.</p>
+              <div class="mt-3">
+                <a href="${'{{ pdf_url|escapejs }}'}" target="_blank" class="btn btn-primary">
+                  <i class="fas fa-external-link-alt me-1"></i>
+                  Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Zoom Functions
+    function zoomIn() {
+      if (currentZoom < 200) {
+        currentZoom += 25;
+        updateZoom();
+      }
+    }
+
+    function zoomOut() {
+      if (currentZoom > 50) {
+        currentZoom -= 25;
+        updateZoom();
+      }
+    }
+
+    function resetZoom() {
+      currentZoom = 100;
+      updateZoom();
+    }
+
+    function updateZoom() {
+      const iframe = document.getElementById('pdfIframe');
+      const zoomDisplay = document.getElementById('zoomLevel');
+      
+      if (iframe) {
+        iframe.style.transform = `scale(${currentZoom / 100})`;
+        iframe.style.transformOrigin = 'top left';
+        
+        if (currentZoom !== 100) {
+          iframe.style.width = `${10000 / currentZoom}%`;
+          iframe.style.height = `${10000 / currentZoom}%`;
+        } else {
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+        }
+      }
+      
+      if (zoomDisplay) {
+        zoomDisplay.textContent = currentZoom + '%';
+      }
+    }
+
+    // Fullscreen Functions
+    function toggleFullscreen() {
+      const container = document.getElementById('pdfViewerContainer');
+      const iframe = document.getElementById('pdfIframe');
+      
+      if (!isFullscreen) {
+        enterFullscreen(container, iframe);
+      } else {
+        exitFullscreen(container, iframe);
+      }
+    }
+
+    function enterFullscreen(container, iframe) {
+      if (container && iframe) {
+        // Create fullscreen wrapper
+        const fullscreenDiv = document.createElement('div');
+        fullscreenDiv.className = 'pdf-fullscreen';
+        fullscreenDiv.id = 'pdfFullscreen';
+        
+        // Create exit button
+        const exitBtn = document.createElement('button');
+        exitBtn.className = 'pdf-fullscreen-exit';
+        exitBtn.innerHTML = '<i class="fas fa-times"></i>';
+        exitBtn.onclick = () => exitFullscreen(container, iframe);
+        
+        // Move iframe to fullscreen
+        fullscreenDiv.appendChild(exitBtn);
+        fullscreenDiv.appendChild(iframe.cloneNode(true));
+        document.body.appendChild(fullscreenDiv);
+        
+        // Hide original iframe
+        iframe.style.display = 'none';
+        isFullscreen = true;
+        
+        // Update fullscreen button icon
+        const fullscreenBtn = document.querySelector('[onclick="toggleFullscreen()"]');
+        if (fullscreenBtn) {
+          fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+          fullscreenBtn.title = 'Exit Fullscreen';
+        }
+      }
+    }
+
+    function exitFullscreen(container, iframe) {
+      const fullscreenDiv = document.getElementById('pdfFullscreen');
+      if (fullscreenDiv) {
+        fullscreenDiv.remove();
+      }
+      
+      // Show original iframe
+      if (iframe) {
+        iframe.style.display = 'block';
+      }
+      
+      isFullscreen = false;
+      
+      // Update fullscreen button icon
+      const fullscreenBtn = document.querySelector('[onclick="toggleFullscreen()"]');
+      if (fullscreenBtn) {
+        fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+        fullscreenBtn.title = 'Fullscreen';
+      }
+    }
+
+    // Keyboard shortcuts
+    function handleKeyboardShortcuts(event) {
+      if (event.ctrlKey || event.metaKey) {
+        switch(event.key) {
+          case '=':
+          case '+':
+            event.preventDefault();
+            zoomIn();
+            break;
+          case '-':
+            event.preventDefault();
+            zoomOut();
+            break;
+          case '0':
+            event.preventDefault();
+            resetZoom();
+            break;
+        }
+      }
+      
+      if (event.key === 'Escape' && isFullscreen) {
+        const container = document.getElementById('pdfViewerContainer');
+        const iframe = document.getElementById('pdfIframe');
+        exitFullscreen(container, iframe);
+      }
+    }
+
+    // Wait for DOM and Bootstrap to be ready
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Order Detail Page Loaded');
+      console.log('Has PDF:', {{ has_pdf|yesno:"true,false" }});
+      
+      {% if pdf_url %}
+      console.log('PDF URL:', '{{ pdf_url|escapejs }}');
+      
+      // Show loading state initially for PDF
+      const pdfIframe = document.getElementById('pdfIframe');
+      if (pdfIframe) {
+        showPdfLoading();
+        
+        // Set a timeout in case onload doesn't fire
+        setTimeout(function() {
+          hidePdfLoading();
+        }, 8000);
+      }
+      {% endif %}
+
+      // Add keyboard shortcuts
+      document.addEventListener('keydown', handleKeyboardShortcuts);
+
+      // Safely initialize Bootstrap components only if Bootstrap is available
+      if (typeof bootstrap !== 'undefined') {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Initialize all modals
+        var deleteModals = document.querySelectorAll('.modal');
+        deleteModals.forEach(function(modalEl) {
+          new bootstrap.Modal(modalEl);
+        });
+      } else {
+        console.warn('Bootstrap is not loaded, skipping tooltip and modal initialization');
+      }
+    });
+  </script>
+{% endblock %}

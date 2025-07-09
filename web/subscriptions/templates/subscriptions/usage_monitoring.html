@@ -1,0 +1,164 @@
+{% extends 'layout/base.html' %}
+{% load django_tables2 %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+  <div class="container-fluid py-4">
+    <h1 class="h3 mb-4">Usage Monitoring</h1>
+
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Total Orders</h5>
+            <h2 class="card-text">{{ total_usage.total_orders|default:0 }}</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Total Tokens</h5>
+            <h2 class="card-text">{{ total_usage.total_tokens|default:0 }}</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Storage Used</h5>
+            <h2 class="card-text">{{ total_usage.total_storage|default:0 }} MB</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Active Alerts</h5>
+            <div>
+              {% for alert in alert_counts %}
+                <span class="badge bg-{% if alert.alert_type == 'warning' %}
+
+
+
+                    warning
+
+
+
+                  {% elif alert.alert_type == 'exceeded' %}
+
+
+
+                    danger
+
+
+
+                  {% else %}
+
+
+
+                    info
+
+
+
+                  {% endif %} me-2">
+                  {{ alert.alert_type }}: {{ alert.count }}
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="get" class="mb-4">
+          <div class="row g-3">
+            <div class="col-md-4">
+              {% bootstrap_field filter.form.tenant show_label=True %}
+            </div>
+            <div class="col-md-4">
+              {% bootstrap_field filter.form.period show_label=True %}
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              {% bootstrap_button button_type='submit' content='Apply Filters' button_class='btn-primary' extra_classes='w-100' %}
+            </div>
+          </div>
+        </form>
+        {% render_table table %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_css %}
+  <style>
+    /* Light mode styles */
+    [data-bs-theme='light'] .table {
+      color: #212529;
+    }
+    [data-bs-theme='light'] label {
+      color: #495057;
+    }
+
+    /* Dark mode styles */
+    [data-bs-theme='dark'] .table {
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] .table-striped > tbody > tr:nth-of-type(odd) > * {
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] label {
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] .form-control,
+    [data-bs-theme='dark'] .form-select {
+      background-color: #2b3035;
+      border-color: #495057;
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] .form-control:focus,
+    [data-bs-theme='dark'] .form-select:focus {
+      background-color: #2b3035;
+      border-color: #0d6efd;
+      color: #e9ecef;
+    }
+
+    .progress {
+      height: 20px;
+    }
+
+    /* Additional styles for month picker */
+    input[type='month'] {
+      min-height: 38px; /* Match Bootstrap form control height */
+    }
+
+    /* Fix for dark mode month picker */
+    [data-bs-theme='dark'] input[type='month'] {
+      background-color: #2b3035;
+      border-color: #495057;
+      color: #e9ecef;
+    }
+
+    [data-bs-theme='dark'] input[type='month']:focus {
+      background-color: #2b3035;
+      border-color: #0d6efd;
+      color: #e9ecef;
+    }
+  </style>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    // Optional: Add any JavaScript for date picker customization
+    document.addEventListener('DOMContentLoaded', function () {
+      // Ensure proper date format when form is submitted
+      const periodInput = document.querySelector('input[type="month"]')
+      if (periodInput) {
+        periodInput.addEventListener('change', function () {
+          // Optional: Add any custom handling for date changes
+        })
+      }
+    })
+  </script>
+{% endblock %}

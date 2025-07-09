@@ -1,0 +1,656 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block extra_head %}
+  {% include 'partials/pdfjs/script.html' %}
+  {% include 'partials/pdfjs/style.html' %}
+  <style>
+    /* Base form styling */
+    .form-floating {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    /* Dark mode specific styles */
+    [data-bs-theme='dark'] .form-control,
+    [data-bs-theme='dark'] .form-select {
+      background-color: var(--bs-dark);
+      border-color: var(--bs-border-color);
+      color: var(--bs-body-color);
+    }
+
+    [data-bs-theme='dark'] .form-control:focus,
+    [data-bs-theme='dark'] .form-select:focus {
+      background-color: var(--bs-dark);
+      border-color: var(--bs-primary);
+      box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+
+    /* Read-only fields in both light and dark mode */
+    .form-control[readonly],
+    .form-select[readonly],
+    .form-control:disabled,
+    .form-select:disabled {
+      background-color: var(--bs-secondary-bg);
+      border-color: var(--bs-border-color);
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    /* Dark mode read-only fields */
+    [data-bs-theme='dark'] .form-control[readonly],
+    [data-bs-theme='dark'] .form-select[readonly],
+    [data-bs-theme='dark'] .form-control:disabled,
+    [data-bs-theme='dark'] .form-select:disabled {
+      background-color: var(--bs-tertiary-bg);
+      color: var(--bs-body-color);
+    }
+
+    /* Form floating labels in dark mode */
+    [data-bs-theme='dark'] .form-floating > label {
+      color: var(--bs-body-color);
+      opacity: 0.65;
+    }
+
+    [data-bs-theme='dark'] .form-floating > .form-control:focus ~ label,
+    [data-bs-theme='dark'] .form-floating > .form-control:not(:placeholder-shown) ~ label {
+      color: var(--bs-body-color);
+      opacity: 0.85;
+    }
+
+    /* Card styling for dark mode */
+    [data-bs-theme='dark'] .card {
+      background-color: var(--bs-dark);
+      border-color: var(--bs-border-color);
+    }
+
+    [data-bs-theme='dark'] .card-header {
+      background-color: var(--bs-tertiary-bg);
+      border-bottom-color: var(--bs-border-color);
+    }
+
+    /* Definition list styling for dark mode */
+    [data-bs-theme='dark'] dt {
+      color: var(--bs-body-color);
+      opacity: 0.85;
+    }
+
+    [data-bs-theme='dark'] dd {
+      color: var(--bs-body-color);
+    }
+
+    /* PDF section styling */
+    .pdf-container {
+      background-color: var(--bs-tertiary-bg);
+      min-height: 500px;
+    }
+
+    [data-bs-theme='dark'] .pdf-container {
+      background-color: var(--bs-dark);
+    }
+
+    .no-pdf-message {
+      text-align: center;
+      padding: 2rem;
+      color: var(--bs-body-color);
+      opacity: 0.7;
+    }
+
+    /* PDF controls in dark mode */
+    [data-bs-theme='dark'] #pdf-controls {
+      background-color: var(--bs-tertiary-bg);
+      border-color: var(--bs-border-color);
+    }
+
+    /* Fix for select elements with readonly */
+    select[readonly] {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+
+    /* Section headers */
+    .section-header {
+      font-size: 1.2rem;
+      font-weight: 600;
+      padding-bottom: 0.5rem;
+      margin: 1.5rem 0 1rem 0;
+      border-bottom: 1px solid var(--bs-border-color);
+      color: var(--bs-primary);
+    }
+
+    .section-header i {
+      margin-right: 0.5rem;
+    }
+
+    /* First section header needs no top margin */
+    .card-body .section-header:first-child {
+      margin-top: 0;
+    }
+
+    /* Grid layout */
+    .content-wrapper {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Main content area */
+    .main-content {
+      min-width: 0; /* Prevent content from overflowing */
+      width: 100%;
+    }
+
+    /* PDF section */
+    .pdf-section {
+      width: 40%;
+      min-width: 500px;
+      position: sticky;
+      top: 1rem;
+      height: fit-content;
+    }
+
+    @media (max-width: 1400px) {
+      .content-wrapper {
+        grid-template-columns: minmax(0, 0.6fr) minmax(0, 0.4fr);
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .content-wrapper {
+        grid-template-columns: minmax(0, 0.6fr) minmax(0, 0.4fr);
+      }
+    }
+
+    @media (max-width: 992px) {
+      .content-wrapper {
+        grid-template-columns: 1fr;
+      }
+      
+      .pdf-section {
+        min-width: 100%;
+      }
+    }
+
+    /* Form grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .form-grid-full {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 576px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* PDF viewer */
+    .pdf-container {
+      min-height: 500px;
+      background-color: var(--bs-tertiary-bg);
+      border-radius: 0.375rem;
+    }
+
+    .no-pdf-message {
+      text-align: center;
+      padding: 2rem;
+      color: var(--bs-body-color);
+      opacity: 0.7;
+    }
+
+    /* Definition list styling for dark mode */
+    [data-bs-theme='dark'] dt {
+      color: var(--bs-body-color);
+      opacity: 0.85;
+    }
+
+    [data-bs-theme='dark'] dd {
+      color: var(--bs-body-color);
+    }
+
+    /* PDF controls in dark mode */
+    [data-bs-theme='dark'] #pdf-controls {
+      background-color: var(--bs-tertiary-bg);
+      border-color: var(--bs-border-color);
+    }
+
+    /* Fix for select elements with readonly */
+    select[readonly] {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid wide py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <h1 class="h3 mb-1">Create Dispatch</h1>
+        <p class="text-muted mb-0">Order #{{ order.order_number }}</p>
+      </div>
+    </div>
+
+    <div class="content-wrapper">
+      <!-- Main Content Section -->
+      <div class="main-content">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+              {% csrf_token %}
+
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+              {% endif %}
+
+              {# Hidden fields #}
+              {% if form.instance.customer %}
+                <input type="hidden" name="customer" value="{{ form.instance.customer.id }}" />
+              {% endif %}
+              <input type="hidden" name="order_number" value="{{ order.order_number }}" />
+              <input type="hidden" name="order_date" value="{{ order.created_at|date:'c' }}" />
+
+              <div class="section-header">
+                <i class="fas fa-info-circle"></i>Basic Information
+              </div>
+
+              <div class="form-grid">
+                {# Customer - Display order's customer name and include hidden customer field #}
+                <div class="form-floating form-grid-full">
+                  <input type="text" class="form-control" value="{{ order.customer_name }}" 
+                        readonly style="padding-bottom: 2px;" />
+                  <label>Customer</label>
+                  {% if form.instance.customer %}
+                  <div class="form-text">Customer ID: {{ form.instance.customer.id }}</div>
+                  {% endif %}
+                </div>
+
+                {# Order Details #}
+                <div class="form-floating">
+                  <input type="text" class="form-control" value="{{ order.order_number }}" 
+                        readonly style="padding-bottom: 2px;" />
+                  <label>Order Number</label>
+                  {% if form.order_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.order_number.errors|join:', ' }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="form-floating">
+                  <input type="text" class="form-control" value="{{ order.created_at|date:'Y-m-d H:i'|default:'N/A' }}" 
+                        readonly style="padding-bottom: 2px;" />
+                  <label>Order Date</label>
+                  {% if form.order_date.errors %}
+                    <div class="invalid-feedback d-block">{{ form.order_date.errors|join:', ' }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="section-header">
+                <i class="fas fa-truck"></i>Assignment Details
+              </div>
+
+              <div class="form-grid">
+                {# Trip selection #}
+                <div class="form-floating form-grid-full">
+                  {{ form.trip }}
+                  <label for="{{ form.trip.id_for_label }}">Trip</label>
+                  {% if form.trip.errors %}
+                    <div class="invalid-feedback d-block">{{ form.trip.errors|join:', ' }}</div>
+                  {% endif %}
+                  {% if trips %}
+                  <small class="form-text text-muted">Select a trip plan to use for this dispatch.</small>
+                  {% endif %}
+                </div>
+
+                {# Driver selection #}
+                <div class="form-floating">
+                  {{ form.driver }}
+                  <label for="{{ form.driver.id_for_label }}">Driver</label>
+                  {% if form.driver.errors %}
+                    <div class="invalid-feedback d-block">{{ form.driver.errors|join:', ' }}</div>
+                  {% endif %}
+                  <div class="form-text">
+                    {% if form.driver.queryset.count == 0 %}
+                      No drivers available for this time period
+                    {% else %}
+                      {{ form.driver.queryset.count }} available driver(s)
+                    {% endif %}
+                  </div>
+                </div>
+
+                {# Truck selection #}
+                <div class="form-floating">
+                  {{ form.truck }}
+                  <label for="{{ form.truck.id_for_label }}">Truck</label>
+                  {% if form.truck.errors %}
+                    <div class="invalid-feedback d-block">{{ form.truck.errors|join:', ' }}</div>
+                  {% endif %}
+                  <div class="form-text">
+                    {% if form.truck.queryset.count == 0 %}
+                      No trucks available for this time period
+                    {% else %}
+                      {{ form.truck.queryset.count }} available truck(s)
+                    {% endif %}
+                  </div>
+                </div>
+
+                {# Carrier selection #}
+                <div class="form-floating form-grid-full">
+                  {{ form.carrier }}
+                  <label for="{{ form.carrier.id_for_label }}">Carrier</label>
+                  {% if form.carrier.errors %}
+                    <div class="invalid-feedback d-block">{{ form.carrier.errors|join:', ' }}</div>
+                  {% endif %}
+                  <!-- <div class="form-text">
+                    {% if form.carrier.queryset.count == 0 %}
+                      No carriers available for this time period
+                    {% else %}
+                      {{ form.carrier.queryset.count }} available carrier(s)
+                    {% endif %}
+                  </div> -->
+                </div>
+              </div>
+
+              <div class="section-header">
+                <i class="fas fa-dollar-sign"></i>Financial Details
+              </div>
+
+              <div class="form-grid">
+                {# Commission Amount - Read Only #}
+                <div class="form-floating">
+                  {{ form.commission_amount }}
+                  <label for="{{ form.commission_amount.id_for_label }}">Commission Amount</label>
+                  {% if form.commission_amount.errors %}
+                    <div class="invalid-feedback d-block">{{ form.commission_amount.errors|join:', ' }}</div>
+                  {% endif %}
+                  <div class="form-text">Automatically calculated based on percentage</div>
+                </div>
+
+                {# Commission Percentage #}
+                <div class="form-floating">
+                  {{ form.commission_percentage }}
+                  <label for="{{ form.commission_percentage.id_for_label }}">Commission Percentage (%)</label>
+                  {% if form.commission_percentage.errors %}
+                    <div class="invalid-feedback d-block">{{ form.commission_percentage.errors|join:', ' }}</div>
+                  {% endif %}
+                </div>
+
+                {# Commission Currency #}
+                <div class="form-floating form-grid-full">
+                  {{ form.commission_currency }}
+                  <label for="{{ form.commission_currency.id_for_label }}">Commission Currency</label>
+                  {% if form.commission_currency.errors %}
+                    <div class="invalid-feedback d-block">{{ form.commission_currency.errors|join:', ' }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="section-header">
+                <i class="fas fa-clipboard-list"></i>Status & Notes
+              </div>
+
+              <div class="form-grid">
+                {# Status #}
+                <div class="form-floating form-grid-full">
+                  {{ form.status }}
+                  <label for="{{ form.status.id_for_label }}">Status</label>
+                  {% if form.status.errors %}
+                    <div class="invalid-feedback d-block">{{ form.status.errors|join:', ' }}</div>
+                  {% endif %}
+                </div>
+
+                {# Notes #}
+                <div class="form-grid-full">
+                  <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                  {{ form.notes }}
+                  {% if form.notes.errors %}
+                    <div class="invalid-feedback d-block">{{ form.notes.errors|join:', ' }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="d-flex gap-2 mt-4">
+                {% bootstrap_button button_type='submit' content='Create Dispatch' button_class='btn-primary' %}
+                <a href="{% url 'dispatch:order_detail' pk=order.pk %}" class="btn btn-outline-secondary">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Information Card -->
+      <div class="card shadow-sm mt-4" style="height: 500px;">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Order Information</h5>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Customer Name</dt>
+            <dd class="col-sm-8">{{ order.customer_name }}</dd>
+
+            <dt class="col-sm-4">Customer Address</dt>
+            <dd class="col-sm-8">{{ order.customer_address }}</dd>
+
+            <dt class="col-sm-4">Customer Phone</dt>
+            <dd class="col-sm-8">{{ order.customer_phone }}</dd>
+
+            <dt class="col-sm-4">Origin</dt>
+            <dd class="col-sm-8">{{ order.origin|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Destination</dt>
+            <dd class="col-sm-8">{{ order.destination|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Pickup Date</dt>
+            <dd class="col-sm-8">{{ order.pickup_date|date:"Y-m-d H:i"|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Delivery Date</dt>
+            <dd class="col-sm-8">{{ order.delivery_date|date:"Y-m-d H:i"|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Load Total</dt>
+            <dd class="col-sm-8">{{ order.load_total|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Load Currency</dt>
+            <dd class="col-sm-8">{{ order.load_currency|default:'N/A' }}</dd>
+
+            <dt class="col-sm-4">Special Instructions</dt>
+            <dd class="col-sm-8">{{ order.remarks_or_special_instructions|default:'None' }}</dd>
+          </dl>
+        </div>
+      </div>
+
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  {% if pdf_url %}
+    {% include 'partials/pdfjs/viewer.html' with pdf_url=pdf_url container_id='pdf-viewer' %}
+  {% endif %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const tripSelect = document.getElementById('id_trip');
+      const driverSelect = document.getElementById('id_driver');
+      const truckSelect = document.getElementById('id_truck');
+      const carrierSelect = document.getElementById('id_carrier');
+      const commissionPercentageInput = document.getElementById('id_commission_percentage');
+      const commissionAmountInput = document.getElementById('id_commission_amount');
+      const loadTotal = parseFloat('{{ load_total|default:"0" }}');
+
+      // Function to update commission amount
+      function updateCommissionAmount() {
+        if (commissionPercentageInput && commissionAmountInput && loadTotal > 0) {
+          const percentage = parseFloat(commissionPercentageInput.value) || 0;
+          // Ensure exactly 2 decimal places
+          const calculatedAmount = (loadTotal * percentage / 100).toFixed(2);
+          commissionAmountInput.value = calculatedAmount;
+        }
+      }
+
+      // Add event listeners for commission percentage changes
+      if (commissionPercentageInput) {
+        ['input', 'change', 'keyup'].forEach(event => {
+          commissionPercentageInput.addEventListener(event, updateCommissionAmount);
+        });
+      }
+
+      // Initial calculation
+      updateCommissionAmount();
+
+      // Function to update available assignments
+      async function updateAvailableAssignments(tripId) {
+        try {
+          // Clear current options
+          driverSelect.innerHTML = '<option value="">---------</option>';
+          truckSelect.innerHTML = '<option value="">---------</option>';
+          carrierSelect.innerHTML = '<option value="">---------</option>';
+
+          if (!tripId) return;
+
+          const response = await fetch(`/dispatch/api/assignments/available-resources/?trip_id=${tripId}`);
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch available assignments');
+          }
+
+          const data = await response.json();
+
+          // Update driver options
+          if (data.drivers && Array.isArray(data.drivers)) {
+            data.drivers.forEach(driver => {
+              const option = new Option(`${driver.first_name} ${driver.last_name}`, driver.id);
+              option.dataset.carrierId = driver.carrier ? driver.carrier.id : '';
+              option.dataset.carrierName = driver.carrier ? driver.carrier.name : '';
+              driverSelect.add(option);
+            });
+
+            // Update help text with counts
+            if (driverSelect.parentNode.querySelector('.form-text')) {
+              driverSelect.parentNode.querySelector('.form-text').textContent = 
+                data.drivers.length === 0 ? 'No drivers available for this time period' : `${data.drivers.length} available driver(s)`;
+            }
+          } else {
+            // Handle case when drivers data is missing or invalid
+            if (driverSelect.parentNode.querySelector('.form-text')) {
+              driverSelect.parentNode.querySelector('.form-text').textContent = 'No drivers available';
+            }
+          }
+
+          // Update truck options
+          if (data.trucks && Array.isArray(data.trucks)) {
+            data.trucks.forEach(truck => {
+              const option = new Option(`${truck.unit} - ${truck.make} ${truck.model}`, truck.id);
+              option.dataset.carrierId = truck.carrier ? truck.carrier.id : '';
+              option.dataset.carrierName = truck.carrier ? truck.carrier.name : '';
+              truckSelect.add(option);
+            });
+
+            // Update help text with counts
+            if (truckSelect.parentNode.querySelector('.form-text')) {
+              truckSelect.parentNode.querySelector('.form-text').textContent = 
+                data.trucks.length === 0 ? 'No trucks available for this time period' : `${data.trucks.length} available truck(s)`;
+            }
+          } else {
+            // Handle case when trucks data is missing or invalid
+            if (truckSelect.parentNode.querySelector('.form-text')) {
+              truckSelect.parentNode.querySelector('.form-text').textContent = 'No trucks available';
+            }
+          }
+
+          // Add event listeners for driver and truck selection
+          driverSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const carrierId = selectedOption.dataset.carrierId;
+            const carrierName = selectedOption.dataset.carrierName;
+
+            // Update carrier field
+            if (carrierId && carrierName) {
+              // Find or create carrier option
+              let carrierOption = Array.from(carrierSelect.options).find(opt => opt.value === carrierId);
+              if (!carrierOption) {
+                carrierOption = new Option(carrierName, carrierId);
+                carrierSelect.add(carrierOption);
+              }
+              carrierSelect.value = carrierId;
+
+              // Filter trucks to show only those from the same carrier
+              Array.from(truckSelect.options).forEach(option => {
+                if (option.value === '') return; // Skip empty option
+                option.style.display = option.dataset.carrierId === carrierId ? '' : 'none';
+              });
+              
+              // Clear truck selection if it's from a different carrier
+              if (truckSelect.value && truckSelect.selectedOptions[0].dataset.carrierId !== carrierId) {
+                truckSelect.value = '';
+              }
+            }
+          });
+
+          truckSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const carrierId = selectedOption.dataset.carrierId;
+            const carrierName = selectedOption.dataset.carrierName;
+
+            // Update carrier field
+            if (carrierId && carrierName) {
+              // Find or create carrier option
+              let carrierOption = Array.from(carrierSelect.options).find(opt => opt.value === carrierId);
+              if (!carrierOption) {
+                carrierOption = new Option(carrierName, carrierId);
+                carrierSelect.add(carrierOption);
+              }
+              carrierSelect.value = carrierId;
+
+              // Filter drivers to show only those from the same carrier
+              Array.from(driverSelect.options).forEach(option => {
+                if (option.value === '') return; // Skip empty option
+                option.style.display = option.dataset.carrierId === carrierId ? '' : 'none';
+              });
+              
+              // Clear driver selection if it's from a different carrier
+              if (driverSelect.value && driverSelect.selectedOptions[0].dataset.carrierId !== carrierId) {
+                driverSelect.value = '';
+              }
+            }
+          });
+
+        } catch (error) {
+          console.error('Error fetching available assignments:', error);
+          // Show error in the form
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+          errorDiv.innerHTML = `
+            Error fetching available resources: ${error.message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          `;
+          const form = document.querySelector('form');
+          if (form) {
+            form.insertBefore(errorDiv, form.firstChild);
+          }
+        }
+      }
+
+      // Add event listener for trip selection change
+      if (tripSelect) {
+        tripSelect.addEventListener('change', function() {
+          // Remove any existing error messages
+          const existingErrors = tripSelect.parentNode.querySelectorAll('.alert-danger');
+          existingErrors.forEach(error => error.remove());
+          
+          updateAvailableAssignments(this.value);
+        });
+
+        // Initial load if trip is pre-selected
+        if (tripSelect.value) {
+          updateAvailableAssignments(tripSelect.value);
+        }
+      }
+    });
+  </script>
+{% endblock %}

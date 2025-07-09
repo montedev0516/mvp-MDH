@@ -1,0 +1,189 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- Messages/Alerts -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">
+          {% if driver %}
+            Update Driver: {{ driver.first_name }} {{ driver.last_name }}
+          {% else %}
+            Add New Driver
+          {% endif %}
+        </h2>
+        <div class="btn-group">
+          <a href="{% url 'fleet:driver-license-upload' %}" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i> Create New License
+          </a>
+          <a href="{% url 'fleet:driver-list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to List
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <form method="post" id="driverForm" novalidate>
+        {% csrf_token %}
+
+        <!-- Required Fields Alert -->
+        <div class="alert alert-info mb-4">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Required Fields:</strong> First Name, Last Name, License Number, and Driver's License are required.
+          {% if not form.drivers_license.field.queryset.exists %}
+            <hr>
+            <p class="mb-0">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              No driver's licenses available. Please <a href="{% url 'fleet:driver-license-upload' %}" class="alert-link">create a new driver's license</a> first.
+            </p>
+          {% endif %}
+        </div>
+
+        <div class="row">
+          <!-- Personal Information -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h5>
+              </div>
+              <div class="card-body">
+                <div class="required-field">{{ form.first_name|as_crispy_field }}</div>
+                <div class="required-field">{{ form.last_name|as_crispy_field }}</div>
+                <div class="required-field">{{ form.license_number|as_crispy_field }}</div>
+                <div class="required-field">{{ form.drivers_license|as_crispy_field }}</div>
+                {{ form.date_of_birth|as_crispy_field }}
+                {{ form.employee_id|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-address-book me-2"></i>Contact Information</h5>
+              </div>
+              <div class="card-body">
+                {{ form.email|as_crispy_field }}
+                {{ form.phone|as_crispy_field }}
+                {{ form.emergency_contact|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Address Information -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Address Information</h5>
+              </div>
+              <div class="card-body">
+                {{ form.address|as_crispy_field }}
+                {{ form.city|as_crispy_field }}
+                {{ form.state|as_crispy_field }}
+                {{ form.zip_code|as_crispy_field }}
+                {{ form.country|as_crispy_field }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Employment Information -->
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Employment Details</h5>
+              </div>
+              <div class="card-body">
+                {{ form.carrier|as_crispy_field }}
+                {{ form.hire_date|as_crispy_field }}
+                <div class="termination-date-field {% if not form.instance.pk or not form.instance.termination_date %}d-none{% endif %}">
+                  {{ form.termination_date|as_crispy_field }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            {% if driver %}
+              Save Changes
+            {% else %}
+              Create Driver
+            {% endif %}
+          </button>
+          {% if driver %}
+            <a href="{% url 'fleet:driver-detail' driver.id %}" class="btn btn-secondary">Cancel</a>
+          {% else %}
+            <a href="{% url 'fleet:driver-list' %}" class="btn btn-secondary">Cancel</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.required-field .control-label::after {
+  content: " *";
+  color: red;
+}
+
+.required-field .form-text {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle termination date field visibility
+  const terminationDateField = document.querySelector('.termination-date-field');
+  const hireDateField = document.querySelector('#id_hire_date');
+  
+  if (hireDateField && terminationDateField) {
+    hireDateField.addEventListener('change', function() {
+      if (this.value) {
+        terminationDateField.classList.remove('d-none');
+      } else {
+        terminationDateField.classList.add('d-none');
+      }
+    });
+  }
+});
+</script>
+{% endblock %} 

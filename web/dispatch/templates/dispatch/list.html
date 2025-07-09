@@ -1,0 +1,318 @@
+{% extends 'layout/base.html' %}
+{% load django_tables2 %}
+{% load django_bootstrap5 %}
+{% load static %}
+
+{% block extra_head %}
+  {% include 'partials/pdfjs/script.html' %}
+  {% include 'partials/pdfjs/style.html' %}
+  <style>
+    .pdf-preview {
+      max-height: 300px;
+      overflow: hidden;
+    }
+    .pdf-canvas {
+      width: 100%;
+      height: auto;
+    }
+    .modal-body {
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Dispatches</h1>
+        <a href="{% url 'dispatch:order_list' %}" class="btn btn-primary">
+          <i class="fas fa-plus me-1"></i> Create Dispatch
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Section -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      {% if table.rows %}
+        <div class="table-responsive">
+          {% render_table table %}
+        </div>
+      {% else %}
+        <div class="text-center p-4">
+          <div class="text-muted mb-3">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No dispatches found</p>
+          </div>
+          <p>
+            To create a dispatch, first select an order from the <a href="{% url 'dispatch:order_list' %}">orders list</a>.
+          </p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- PDF Preview Modal -->
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pdfPreviewModalLabel">Order Document</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="pdf-controls" class="mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary" id="prev">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" id="next">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+            <span>Page <span id="page_num"></span> of <span id="page_count"></span></span>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary" id="zoom-out">
+                <i class="fas fa-search-minus"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" id="zoom-in">
+                <i class="fas fa-search-plus"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="pdf-preview">
+          <canvas id="pdf-viewer" class="pdf-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete this dispatch?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="deleteDispatchBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.table-responsive {
+  margin-bottom: 0;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.btn-group {
+  box-shadow: none;
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.table th {
+  background-color: #f8f9fa;
+  border-bottom-width: 1px;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.clickable-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.clickable-table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.075);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.status-badge {
+  font-size: 0.875rem;
+  padding: 0.35em 0.65em;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Initialize tooltips
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+  const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+  })
+
+  // Table click handler
+  const table = document.querySelector('.clickable-table')
+  if (table) {
+    table.addEventListener('click', function (e) {
+      const row = e.target.closest('tr')
+      if (row && !e.target.closest('a') && !e.target.closest('.pagination') && !e.target.closest('.delete-btn')) {
+        const link = row.querySelector('a')
+        if (link) {
+          window.location.href = link.href
+        }
+      }
+    })
+  }
+
+  // Delete button handler
+  let dispatchToDelete = null;
+  const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+  
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      dispatchToDelete = this.dataset.dispatchId;
+      deleteModal.show();
+    });
+  });
+
+  // Confirm delete handler
+  document.getElementById('deleteDispatchBtn').addEventListener('click', function() {
+    if (dispatchToDelete) {
+      // Build the delete URL dynamically
+      const deleteUrl = `/dispatch/${dispatchToDelete}/delete/`;
+      window.location.href = deleteUrl;
+    }
+    deleteModal.hide();
+  });
+
+  // PDF viewer variables
+  let pdfDoc = null;
+  let pageNum = 1;
+  let pageRendering = false;
+  let pageNumPending = null;
+  let scale = 1.0;
+  let canvas = document.getElementById('pdf-viewer');
+  let ctx = canvas.getContext('2d');
+
+  function cleanup() {
+    if (pdfDoc) {
+      pdfDoc.destroy();
+      pdfDoc = null;
+    }
+    pageNum = 1;
+    pageRendering = false;
+    pageNumPending = null;
+    scale = 1.0;
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  function renderPage(num) {
+    if (!pdfDoc) return;
+    
+    pageRendering = true;
+    pdfDoc.getPage(num).then(function(page) {
+      const viewport = page.getViewport({ scale: scale });
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      const renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
+      };
+
+      const renderTask = page.render(renderContext);
+      renderTask.promise.then(function() {
+        pageRendering = false;
+        if (pageNumPending !== null) {
+          renderPage(pageNumPending);
+          pageNumPending = null;
+        }
+      });
+    });
+
+    document.getElementById('page_num').textContent = num;
+  }
+
+  function queueRenderPage(num) {
+    if (pageRendering) {
+      pageNumPending = num;
+    } else {
+      renderPage(num);
+    }
+  }
+
+  function onPrevPage() {
+    if (pageNum <= 1) return;
+    pageNum--;
+    queueRenderPage(pageNum);
+  }
+
+  function onNextPage() {
+    if (pageNum >= pdfDoc.numPages) return;
+    pageNum++;
+    queueRenderPage(pageNum);
+  }
+
+  function onZoomIn() {
+    scale *= 1.2;
+    queueRenderPage(pageNum);
+  }
+
+  function onZoomOut() {
+    scale /= 1.2;
+    queueRenderPage(pageNum);
+  }
+
+  // Modal event handlers
+  const pdfModal = document.getElementById('pdfPreviewModal');
+  pdfModal.addEventListener('show.bs.modal', function(event) {
+    cleanup();
+    const button = event.relatedTarget;
+    const pdfUrl = button.getAttribute('data-pdf-url');
+    
+    if (pdfUrl) {
+      pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+        pdfDoc = pdf;
+        document.getElementById('page_count').textContent = pdf.numPages;
+        renderPage(pageNum);
+      });
+    }
+  });
+
+  pdfModal.addEventListener('hidden.bs.modal', cleanup);
+
+  // Button event listeners
+  document.getElementById('prev').addEventListener('click', onPrevPage);
+  document.getElementById('next').addEventListener('click', onNextPage);
+  document.getElementById('zoom-in').addEventListener('click', onZoomIn);
+  document.getElementById('zoom-out').addEventListener('click', onZoomOut);
+})
+</script>
+{% endblock %}

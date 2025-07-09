@@ -1,0 +1,280 @@
+{# expense/templates/expense/other/detail.html #}
+{% extends 'layout/base.html' %}
+{% load humanize %}
+
+{% comment %}
+Other Expense Detail Template
+Updated: Standardized UI to match Driver Payout design patterns
+{% endcomment %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Other Expense Details</h1>
+        <div>
+            <a href="{% url 'other_expense_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+            <a href="{% url 'other_expense_update' expense.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            {% if expense.status == 'Pending' %}
+                <form method="post" action="{% url 'other_expense_delete' expense.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this expense record?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Other Expense Summary Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-receipt"></i> {{ expense.driver|default:"Unknown Driver" }} - Other Expense Summary
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Date & Time:</strong><br>
+                    {{ expense.date|date:'M d, Y H:i' }}
+                </div>
+                <div class="col-md-2">
+                    <strong>Status:</strong><br>
+                    <span class="badge bg-{% if expense.status == 'Pending' %}warning{% elif expense.status == 'Approved' %}success{% elif expense.status == 'Reimbursed' %}info{% else %}secondary{% endif %}">
+                        {{ expense.get_status_display }}
+                    </span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Category:</strong><br>
+                    <span class="badge bg-secondary">{{ expense.get_category_display }}</span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Payment Method:</strong><br>
+                    {{ expense.get_payment_method_display|default:"N/A" }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Total Amount:</strong><br>
+                    <h4 class="text-primary">${{ expense.amount|floatformat:2 }} {{ expense.currency }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Summary -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <!-- Financial Summary -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-dollar-sign"></i> Financial Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h6 class="text-success">Base Amount</h6>
+                                <h4>${{ expense.amount|floatformat:2 }}</h4>
+                                <small class="text-muted">{{ expense.currency }}</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-info">Tax Information</h6>
+                            {% if expense.tax_amount %}
+                                <p class="mb-1">Tax: ${{ expense.tax_amount|floatformat:2 }}</p>
+                                <p class="mb-1">Type: {{ expense.get_tax_type_display }}</p>
+                                <hr class="my-2">
+                                <h5 class="text-primary">Total: ${{ expense.amount|add:expense.tax_amount|floatformat:2 }}</h5>
+                            {% else %}
+                                <p class="mb-1">No tax applied</p>
+                                <hr class="my-2">
+                                <h5 class="text-primary">Total: ${{ expense.amount|floatformat:2 }}</h5>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <!-- Status Summary -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-tasks"></i> Status Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1">Status: 
+                                <span class="badge bg-{% if expense.status == 'Pending' %}warning{% elif expense.status == 'Approved' %}success{% elif expense.status == 'Reimbursed' %}info{% else %}secondary{% endif %}">
+                                    {{ expense.get_status_display }}
+                                </span>
+                            </p>
+                            <p class="mb-1">Reimbursable: 
+                                {% if expense.is_reimbursable %}
+                                    <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1">Reimbursement: 
+                                <span class="badge bg-{% if expense.reimbursement_status == 'Pending' %}warning{% elif expense.reimbursement_status == 'Completed' %}success{% else %}secondary{% endif %}">
+                                    {{ expense.get_reimbursement_status_display }}
+                                </span>
+                            </p>
+                            <p class="mb-1">Receipt #: {{ expense.receipt_number|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Information Tabs -->
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="detailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                        <i class="fas fa-info-circle"></i> Basic Information
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="vendor-tab" data-bs-toggle="tab" data-bs-target="#vendor" type="button" role="tab">
+                        <i class="fas fa-store"></i> Vendor Details
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="vehicle-tab" data-bs-toggle="tab" data-bs-target="#vehicle" type="button" role="tab">
+                        <i class="fas fa-truck"></i> Vehicle & Driver
+                    </button>
+                </li>
+                {% if expense.receipt_image %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="receipt-tab" data-bs-toggle="tab" data-bs-target="#receipt" type="button" role="tab">
+                        <i class="fas fa-image"></i> Receipt Image
+                    </button>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="detailTabsContent">
+                <!-- Basic Information Tab -->
+                <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <tbody>
+                                <tr>
+                                    <th width="30%">Expense Name:</th>
+                                    <td><strong>{{ expense.name }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Date & Time:</th>
+                                    <td>{{ expense.date|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Category:</th>
+                                    <td><span class="badge bg-secondary">{{ expense.get_category_display }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Description:</th>
+                                    <td>{{ expense.description|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Notes:</th>
+                                    <td>{{ expense.notes|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Created:</th>
+                                    <td>{{ expense.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated:</th>
+                                    <td>{{ expense.updated_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Vendor Details Tab -->
+                <div class="tab-pane fade" id="vendor" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <tbody>
+                                <tr>
+                                    <th width="30%">Vendor Name:</th>
+                                    <td><strong>{{ expense.vendor_name|default:"-" }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Vendor Location:</th>
+                                    <td>{{ expense.vendor_location|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Receipt Number:</th>
+                                    <td><code>{{ expense.receipt_number|default:"-" }}</code></td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Method:</th>
+                                    <td>{{ expense.get_payment_method_display|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Reference:</th>
+                                    <td>{{ expense.payment_reference|default:"-" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Vehicle & Driver Tab -->
+                <div class="tab-pane fade" id="vehicle" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <tbody>
+                                <tr>
+                                    <th width="30%">Driver Name:</th>
+                                    <td><strong>{{ expense.driver|default:"-" }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Driver Email:</th>
+                                    <td>{{ expense.driver.email|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Truck:</th>
+                                    <td>{{ expense.truck|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Odometer Reading:</th>
+                                    <td>{{ expense.odometer|default:"-" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Receipt Image Tab -->
+                {% if expense.receipt_image %}
+                <div class="tab-pane fade" id="receipt" role="tabpanel">
+                    <div class="text-center">
+                        <img src="{{ expense.receipt_image.url }}" alt="Receipt" class="img-fluid rounded shadow" style="max-height: 600px;">
+                        <div class="mt-3">
+                            <a href="{{ expense.receipt_image.url }}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt"></i> View Full Size
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

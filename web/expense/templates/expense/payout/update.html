@@ -1,0 +1,209 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Update Payout</h1>
+        <div>
+            <a href="{% url 'payout_detail' object.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Details
+            </a>
+        </div>
+    </div>
+
+    <!-- Payout Info Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-user"></i> {{ object.driver }} - {{ object.from_date|date:'M d, Y' }} to {{ object.to_date|date:'M d, Y' }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Current Status:</strong>
+                    <span class="badge {% if object.status == 'Draft' %}bg-secondary{% elif object.status == 'Processing' %}bg-warning{% elif object.status == 'Completed' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ object.get_status_display }}
+                    </span>
+                </div>
+                <div class="col-md-4">
+                    <strong>Current CAD Total:</strong> ${{ object.final_cad_amount|floatformat:2 }}
+                </div>
+                <div class="col-md-4">
+                    <strong>Current USD Total:</strong> ${{ object.final_usd_amount|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Form -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-edit"></i> Update Payout Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- Status -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.status.label_tag }}
+                        {{ form.status|add_class:"form-control" }}
+                        <small class="form-text text-muted">
+                            Change status to control payout workflow. Only draft payouts can be fully edited.
+                        </small>
+                        {% if form.status.errors %}
+                            <div class="text-danger">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Exchange Rate -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.exchange_rate.label_tag }}
+                        {{ form.exchange_rate|add_class:"form-control" }}
+                        <small class="form-text text-muted">
+                            CAD to USD exchange rate used for currency conversion
+                        </small>
+                        {% if form.exchange_rate.errors %}
+                            <div class="text-danger">{{ form.exchange_rate.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Final CAD Amount -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.final_cad_amount.label_tag }}
+                        {{ form.final_cad_amount|add_class:"form-control" }}
+                        <small class="form-text text-muted">
+                            Total amount in CAD after all calculations and currency conversion
+                        </small>
+                        {% if form.final_cad_amount.errors %}
+                            <div class="text-danger">{{ form.final_cad_amount.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Final USD Amount -->
+                    <div class="col-md-6 mb-3">
+                        {{ form.final_usd_amount.label_tag }}
+                        {{ form.final_usd_amount|add_class:"form-control" }}
+                        <small class="form-text text-muted">
+                            Total amount in USD after all calculations and currency conversion
+                        </small>
+                        {% if form.final_usd_amount.errors %}
+                            <div class="text-danger">{{ form.final_usd_amount.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Current Calculation Summary (Read-only) -->
+                <div class="card mt-4 bg-light">
+                    <div class="card-header">
+                        <h6 class="mb-0">Current Calculation Breakdown (Read-only)</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-success">CAD Breakdown</h6>
+                                <ul class="list-unstyled">
+                                    <li>Revenue: ${{ object.cad_revenue|floatformat:2 }}</li>
+                                    <li>Commission: -${{ object.cad_commission|floatformat:2 }}</li>
+                                    <li>Expenses: -${{ object.cad_expenses|floatformat:2 }}</li>
+                                    <li><strong>Net CAD: ${{ object.cad_payout|floatformat:2 }}</strong></li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-info">USD Breakdown</h6>
+                                <ul class="list-unstyled">
+                                    <li>Revenue: ${{ object.usd_revenue|floatformat:2 }}</li>
+                                    <li>Commission: -${{ object.usd_commission|floatformat:2 }}</li>
+                                    <li>Expenses: -${{ object.usd_expenses|floatformat:2 }}</li>
+                                    <li><strong>Net USD: ${{ object.usd_payout|floatformat:2 }}</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <strong>Note:</strong> To recalculate these values based on current dispatches and expenses, 
+                            use the "Recalculate" button on the detail page.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success me-2">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <a href="{% url 'payout_detail' object.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    {% if object.status == 'Draft' %}
+                        <a href="{% url 'payout_recalculate' object.pk %}" class="btn btn-info ms-2">
+                            <i class="fas fa-calculator"></i> Recalculate Values
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Status Change Information -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-info-circle"></i> Status Information</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6 class="text-secondary">Draft</h6>
+                    <p class="small">Initial calculation state. All fields can be edited and recalculated.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-warning">Processing</h6>
+                    <p class="small">Payout is being prepared for payment. Limited editing allowed.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-success">Completed</h6>
+                    <p class="small">Payout has been finalized and processed. Read-only state.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusField = document.getElementById('id_status');
+    const finalAmountFields = document.querySelectorAll('#id_final_cad_amount, #id_final_usd_amount');
+    
+    function updateFieldStates() {
+        const status = statusField.value;
+        const isProcessingOrCompleted = status === 'Processing' || status === 'Completed';
+        
+        finalAmountFields.forEach(field => {
+            if (isProcessingOrCompleted) {
+                field.required = true;
+                field.parentElement.querySelector('.form-text').innerHTML = 
+                    '<strong>Required for ' + status + ' status.</strong> ' + field.parentElement.querySelector('.form-text').innerHTML;
+            }
+        });
+    }
+    
+    statusField.addEventListener('change', updateFieldStates);
+    updateFieldStates(); // Run on page load
+});
+</script>
+{% endblock %} 

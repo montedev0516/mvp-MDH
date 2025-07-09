@@ -1,0 +1,139 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Edit Other Expense</h1>
+        <div>
+            <a href="{% url 'other_expense_detail' expense.pk %}" class="btn btn-info">
+                <i class="fas fa-eye"></i> View Details
+            </a>
+            <a href="{% url 'other_expense_list' %}" class="btn btn-secondary">
+                <i class="fas fa-list"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Basic Information -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form.date|as_crispy_field }}
+                        {{ form.name|as_crispy_field }}
+                        {{ form.category|as_crispy_field }}
+                        {{ form.description|as_crispy_field }}
+                        {{ form.notes|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Information -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Financial Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.amount|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.currency|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.tax_amount|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.tax_type|as_crispy_field }}
+                            </div>
+                        </div>
+                        {{ form.status|as_crispy_field }}
+                        {{ form.is_reimbursable|as_crispy_field }}
+                        {{ form.reimbursement_status|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vendor Information -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Vendor Information</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form.vendor_name|as_crispy_field }}
+                        {{ form.vendor_location|as_crispy_field }}
+                        {{ form.receipt_number|as_crispy_field }}
+                        {{ form.payment_method|as_crispy_field }}
+                        {{ form.payment_reference|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vehicle Information -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Vehicle Information</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form.driver|as_crispy_field }}
+                        {{ form.truck|as_crispy_field }}
+                        {{ form.odometer|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receipt Image -->
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Receipt Image</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.receipt_image|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {% if expense.receipt_image %}
+                                    <div class="text-center">
+                                        <p class="mb-2">Current Receipt Image:</p>
+                                        <img src="{{ expense.receipt_image.url }}" alt="Current Receipt" class="img-fluid" style="max-height: 200px;">
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <a href="{% url 'other_expense_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

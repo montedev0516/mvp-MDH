@@ -1,0 +1,20 @@
+{% comment %}
+Universal Status Badge Component
+
+Usage:
+{% include 'expense/partials/status_badge.html' with status=object.status status_display=object.get_status_display color_class=object.get_status_color %}
+
+Parameters:
+- status: The status value
+- status_display: The display text for status  
+- color_class: Bootstrap color class (optional, defaults to secondary)
+- size: Badge size - 'sm' or 'lg' (optional)
+- icon: Show status icon (optional, defaults to true)
+{% endcomment %}
+
+<span class="badge bg-{{ color_class|default:'secondary' }} text-white {% if size == 'sm' %}badge-sm{% elif size == 'lg' %}badge-lg{% endif %}">
+    {% if icon|default:true %}
+        <i class="fas fa-circle me-1" style="font-size: 0.6em;"></i>
+    {% endif %}
+    {{ status_display }}
+</span> 

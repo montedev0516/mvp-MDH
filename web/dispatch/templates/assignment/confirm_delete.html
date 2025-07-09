@@ -1,0 +1,33 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white">
+          <h2 class="h4 mb-0">Confirm Delete</h2>
+        </div>
+        <div class="card-body">
+          <p>Are you sure you want to delete the assignment of <strong>{{ object.driver.first_name }} {{ object.driver.last_name }}</strong> to truck <strong>#{{ object.truck.unit }}</strong>?</p>
+          
+          {% if object.dispatch %}
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            This assignment is linked to dispatch <strong>{{ object.dispatch.dispatch_id }}</strong>. Deleting it may affect the dispatch.
+          </div>
+          {% endif %}
+          
+          <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-danger">Confirm Delete</button>
+              <a href="{% url 'dispatch:assignment-list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,109 @@
+{% extends 'layout/base.html' %}
+{% load django_tables2 %}
+{% load django_bootstrap5 %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Orders</h1>
+    <a href="{% url 'dispatch:order_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus me-1"></i> Create Order
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <form id="order-action-form" method="post">
+          {% csrf_token %}
+          {% render_table table %}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+{% for order in table.data %}
+<div class="modal fade" id="deleteModal{{ order.pk }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-start">
+        <p>Are you sure you want to delete order <strong>#{{ order.order_number }}</strong>?</p>
+        <p class="text-danger">This action cannot be undone.</p>
+        
+        {% if order.dispatches.exists or order.trips.exists %}
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Warning:</strong> This order has:
+          <ul class="mb-0">
+            {% if order.dispatches.exists %}
+            <li>{{ order.dispatches.count }} associated dispatch(es)</li>
+            {% endif %}
+            {% if order.trips.exists %}
+            <li>{{ order.trips.count }} associated trip(s)</li>
+            {% endif %}
+          </ul>
+          Deleting this order will also delete all related records.
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form action="{% url 'dispatch:order_delete' order.pk %}" method="post" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const table = document.querySelector('.clickable-table')
+  if (table) {
+    table.addEventListener('click', function (e) {
+      const row = e.target.closest('tr')
+      // Don't trigger row click if clicking delete button or inside delete modal
+      if (row && !e.target.closest('button') && !e.target.closest('.modal') && !e.target.closest('a')) {
+        const link = row.querySelector('.order-link')
+        if (link) {
+          window.location.href = link.href
+        }
+      }
+    })
+  }
+
+  // Initialize all modals
+  const deleteModals = document.querySelectorAll('.modal')
+  deleteModals.forEach(modal => {
+    new bootstrap.Modal(modal)
+  })
+})
+</script>
+{% endblock %}

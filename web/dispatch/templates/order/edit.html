@@ -1,0 +1,510 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block extra_head %}
+  <!-- Remove PDF.js includes since we're using iframe -->
+{% endblock %}
+
+{% block style %}
+<style>
+  /* Layout styles */
+  .row {
+    --bs-gutter-x: 2rem;
+    display: flex;
+    align-items: stretch;
+    flex-direction: row;
+    min-height: calc(100vh - 150px);
+  }
+
+  .col-md-6 {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* Card styles */
+  .card {
+    height: 100%;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Form styles */
+  .form-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+  }
+
+  .buttons-container {
+    margin-top: auto;
+    padding-top: 1rem;
+    flex-shrink: 0;
+  }
+
+  /* PDF sidebar styles - matching detail.html */
+  .pdf-sidebar {
+    height: calc(100vh - 150px);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pdf-sidebar .card {
+    flex: 1;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 4px 8px rgba(155, 75, 75, 0.1);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .pdf-sidebar .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .pdf-sidebar .card-body {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 220px);
+  }
+
+  .pdf-sidebar .card-header .card-title {
+    color: #495057;
+    font-size: 1rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pdf-sidebar .card-header .card-title::before {
+    content: "📄";
+    font-size: 1.1rem;
+  }
+
+  .pdf-controls {
+    gap: 2px;
+  }
+
+  .pdf-controls .btn {
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    min-width: 32px;
+  }
+
+  .pdf-viewer-container {
+    height: 100%;
+    flex: 1;
+    position: relative;
+    background: #f8f9fa;
+    overflow: hidden;
+    min-height: calc(100vh - 250px);
+  }
+
+  .pdf-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+    display: none;
+    transition: transform 0.3s ease;
+    min-height: calc(100vh - 250px);
+  }
+
+  .pdf-iframe.loaded {
+    display: block;
+  }
+
+  .pdf-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(248, 249, 250, 0.95);
+    color: #6c757d;
+    font-size: 0.9rem;
+    z-index: 10;
+  }
+
+  .no-pdf-container {
+    height: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    min-height: calc(100vh - 250px);
+  }
+
+  .no-pdf-message {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .no-pdf-message .pdf-icon {
+    font-size: 4rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+  }
+
+  .no-pdf-message h4 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .no-pdf-message p {
+    color: #6c757d;
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  /* Custom scrollbar for form container */
+  .form-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .form-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  .form-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+
+  .form-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .row {
+      min-height: auto;
+      flex-direction: column;
+    }
+
+    .form-container {
+      max-height: 50vh;
+      margin-bottom: 1rem;
+    }
+
+    .pdf-sidebar {
+      height: 50vh;
+      min-height: 400px;
+    }
+
+    .pdf-sidebar .card-body {
+      height: calc(50vh - 80px);
+    }
+
+    .pdf-viewer-container,
+    .pdf-iframe,
+    .no-pdf-container {
+      min-height: calc(50vh - 120px);
+    }
+
+    .pdf-controls .btn {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.75rem;
+      min-width: 28px;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .pdf-sidebar {
+      height: calc(100vh - 180px);
+      min-height: 600px;
+    }
+
+    .pdf-sidebar .card-body {
+      height: calc(100vh - 250px);
+    }
+
+    .pdf-viewer-container,
+    .pdf-iframe,
+    .no-pdf-container {
+      min-height: calc(100vh - 280px);
+    }
+  }
+
+  @media (min-width: 1025px) {
+    .pdf-sidebar {
+      height: calc(100vh - 150px);
+      min-height: 700px;
+    }
+
+    .pdf-sidebar .card-body {
+      height: calc(100vh - 220px);
+    }
+
+    .pdf-viewer-container,
+    .pdf-iframe,
+    .no-pdf-container {
+      min-height: calc(100vh - 250px);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="row mb-3">
+      <div class="col">
+        <h1>Edit Order Information</h1>
+        <h2 class="h5 text-muted">Order #{{ object.order_number }}</h2>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Form Column -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <form method="post" onsubmit="showLoader()" class="form-container">
+              {% csrf_token %}
+              {% bootstrap_form form %}
+              <div class="buttons-container">
+                {% bootstrap_button 'Save Changes' button_type='submit' button_class='btn-primary' %}
+                {% bootstrap_button 'Cancel' button_type='link' href=view.get_success_url button_class='btn-secondary' %}
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF Preview Column -->
+      <div class="col-md-6">
+        <div class="pdf-sidebar" style="height: 100%;">
+          <div class="card shadow-sm" style="height: 100%;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Order Document</h5>
+              {% if has_pdf and pdf_url %}
+                <div class="pdf-controls btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary" onclick="zoomOut()" title="Zoom Out">
+                    <i class="fas fa-search-minus"></i>
+                  </button>
+                  <button class="btn btn-outline-secondary" onclick="resetZoom()" title="Reset Zoom">
+                    <span id="zoomLevel">100%</span>
+                  </button>
+                  <button class="btn btn-outline-secondary" onclick="zoomIn()" title="Zoom In">
+                    <i class="fas fa-search-plus"></i>
+                  </button>
+                  <a href="{{ pdf_url }}" target="_blank" class="btn btn-outline-success" title="Open in new tab">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+            <div class="card-body p-0 position-relative" style="height: 100%;">
+              {% if has_pdf and pdf_url %}
+                <div class="pdf-viewer-container" id="pdfViewerContainer" style="height: 100%;">
+                  <div class="pdf-loading" id="pdfLoading">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading PDF...</span>
+                    </div>
+                    <div class="mt-2">Loading document...</div>
+                  </div>
+                  <iframe 
+                    id="pdfIframe"
+                    src="{{ pdf_url }}#toolbar=1&navpanes=1&scrollbar=1&view=FitH"
+                    class="pdf-iframe"
+                    title="Order #{{ object.order_number }} Document"
+                    frameborder="0"
+                    allowfullscreen
+                    style="height: 100%; width: 100%;"
+                    onload="hidePdfLoading()"
+                    onerror="showPdfError()">
+                    <div class="fallback-content p-4 text-center">
+                      <h5>PDF Viewer Not Supported</h5>
+                      <p>Your browser doesn't support embedded PDFs.</p>
+                      <a href="{{ pdf_url }}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-external-link-alt me-2"></i>Open PDF in New Tab
+                      </a>
+                    </div>
+                  </iframe>
+                </div>
+              {% else %}
+                <div class="no-pdf-container">
+                  <div class="no-pdf-message">
+                    <div class="pdf-icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h4>No Document Available</h4>
+                    <p>This order doesn't have an associated PDF document.</p>
+                    <div class="mt-3">
+                      <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Documents are generated when orders are processed from uploaded files.
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    // PDF Viewer State
+    let currentZoom = 100;
+
+    // PDF Management Functions
+    function showPdfLoading() {
+      const loading = document.getElementById('pdfLoading');
+      const iframe = document.getElementById('pdfIframe');
+      if (loading && iframe) {
+        loading.style.display = 'flex';
+        iframe.classList.remove('loaded');
+      }
+    }
+
+    function hidePdfLoading() {
+      const loading = document.getElementById('pdfLoading');
+      const iframe = document.getElementById('pdfIframe');
+      if (loading && iframe) {
+        loading.style.display = 'none';
+        iframe.classList.add('loaded');
+      }
+    }
+
+    function showPdfError() {
+      const container = document.getElementById('pdfViewerContainer');
+      if (container) {
+        container.innerHTML = `
+          <div class="no-pdf-container">
+            <div class="no-pdf-message">
+              <div class="pdf-icon">
+                <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+              </div>
+              <h4 style="color: #dc3545;">Error Loading PDF</h4>
+              <p>Unable to load the PDF document. Please try opening in a new tab.</p>
+              <div class="mt-3">
+                <a href="${'{{ pdf_url|escapejs }}'}" target="_blank" class="btn btn-primary">
+                  <i class="fas fa-external-link-alt me-1"></i>
+                  Open in New Tab
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Zoom Functions
+    function zoomIn() {
+      if (currentZoom < 200) {
+        currentZoom += 25;
+        updateZoom();
+      }
+    }
+
+    function zoomOut() {
+      if (currentZoom > 50) {
+        currentZoom -= 25;
+        updateZoom();
+      }
+    }
+
+    function resetZoom() {
+      currentZoom = 100;
+      updateZoom();
+    }
+
+    function updateZoom() {
+      const iframe = document.getElementById('pdfIframe');
+      const zoomDisplay = document.getElementById('zoomLevel');
+      
+      if (iframe) {
+        iframe.style.transform = `scale(${currentZoom / 100})`;
+        iframe.style.transformOrigin = 'top left';
+        
+        if (currentZoom !== 100) {
+          iframe.style.width = `${10000 / currentZoom}%`;
+          iframe.style.height = `${10000 / currentZoom}%`;
+        } else {
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+        }
+      }
+      
+      if (zoomDisplay) {
+        zoomDisplay.textContent = currentZoom + '%';
+      }
+    }
+
+    // Form loading state
+    function showLoader() {
+      const submitBtn = document.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Saving...';
+      }
+    }
+
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Order Edit Page Loaded');
+      console.log('Has PDF:', {{ has_pdf|yesno:"true,false" }});
+      
+      {% if pdf_url %}
+      console.log('PDF URL:', '{{ pdf_url|escapejs }}');
+      
+      // Show loading state initially for PDF
+      const pdfIframe = document.getElementById('pdfIframe');
+      if (pdfIframe) {
+        showPdfLoading();
+        
+        // Set a timeout in case onload doesn't fire
+        setTimeout(function() {
+          hidePdfLoading();
+        }, 8000);
+      }
+      {% endif %}
+
+      // Safely initialize Bootstrap components only if Bootstrap is available
+      if (typeof bootstrap !== 'undefined') {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+      } else {
+        console.warn('Bootstrap is not loaded, skipping tooltip initialization');
+      }
+    });
+  </script>
+{% endblock %}

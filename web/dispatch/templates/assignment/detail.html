@@ -1,0 +1,264 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- Messages/Alerts -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Assignment Details</h2>
+    <div class="btn-group">
+      <a href="{% url 'dispatch:assignment-update' assignment.id %}" class="btn btn-warning">
+        <i class="fas fa-edit me-1"></i> Edit
+      </a>
+      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+        <i class="fas fa-trash me-1"></i> Delete
+      </button>
+      <a href="{% url 'dispatch:assignment-list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Assignment Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-link me-2"></i>Assignment Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Status:</strong></p>
+              <span class="badge {% if assignment.status in 'assigned,on_duty' %}bg-success{% else %}bg-secondary{% endif %} mb-3">
+                {{ assignment.get_status_display }}
+              </span>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Created:</strong></p>
+              <p class="text-muted">{{ assignment.created_at|date:"Y-m-d H:i" }}</p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Start Date:</strong></p>
+              <p>{{ assignment.start_date|date:"Y-m-d" }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>End Date:</strong></p>
+              <p>{{ assignment.end_date|date:"Y-m-d"|default:"Ongoing" }}</p>
+            </div>
+          </div>
+          {% if assignment.notes %}
+            <div class="mt-3">
+              <p class="mb-1"><strong>Notes:</strong></p>
+              <p class="text-muted">{{ assignment.notes }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Driver Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-user me-2"></i>Driver Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Name:</strong></p>
+              <p>
+                <a href="{% url 'fleet:driver-detail' assignment.driver.id %}">
+                  {{ assignment.driver.first_name }} {{ assignment.driver.last_name }}
+                </a>
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>License:</strong></p>
+              <p>{{ assignment.driver.license_number }}</p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Phone:</strong></p>
+              <p>{{ assignment.driver.phone }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Email:</strong></p>
+              <p>{{ assignment.driver.email }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Truck Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Truck Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Unit Number:</strong></p>
+              <p>
+                <a href="{% url 'fleet:truck-detail' assignment.truck.id %}">
+                  {{ assignment.truck.unit }}
+                </a>
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>VIN:</strong></p>
+              <p>{{ assignment.truck.vin }}</p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Make:</strong></p>
+              <p>{{ assignment.truck.make }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Model:</strong></p>
+              <p>{{ assignment.truck.model }}</p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Year:</strong></p>
+              <p>{{ assignment.truck.year }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>License Plate:</strong></p>
+              <p>{{ assignment.truck.plate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carrier Information -->
+    <div class="col-md-6 mb-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-building me-2"></i>Carrier Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Name:</strong></p>
+              <p>
+                <a href="{% url 'fleet:carrier-detail' assignment.carrier.id %}">
+                  {{ assignment.carrier.name }}
+                </a>
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>DOT Number:</strong></p>
+              <p>{{ assignment.carrier.dot_number }}</p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>MC Number:</strong></p>
+              <p>{{ assignment.carrier.mc_number }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Status:</strong></p>
+              <span class="badge {% if assignment.carrier.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                {% if assignment.carrier.is_active %}Active{% else %}Inactive{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete this assignment between:</p>
+        <ul>
+          <li><strong>Driver:</strong> {{ assignment.driver.first_name }} {{ assignment.driver.last_name }}</li>
+          <li><strong>Truck:</strong> {{ assignment.truck.unit }}</li>
+          <li><strong>Start Date:</strong> {{ assignment.start_date|date:"Y-m-d" }}</li>
+        </ul>
+        <p class="text-danger">This action cannot be undone.</p>
+        {% if assignment.status in 'ASSIGNED,ON_DUTY' %}
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Warning:</strong> This is an active assignment. Deleting it will affect current operations.
+          </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form action="{% url 'dispatch:assignment-delete' assignment.id %}" method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  margin-bottom: 1rem;
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-weight: 500;
+}
+
+a {
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.text-muted {
+  color: #6c757d;
+}
+
+.modal-content {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %} 

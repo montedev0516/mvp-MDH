@@ -1,0 +1,254 @@
+{# templates/partials/pdfjs/viewer.html #}
+{% comment %}
+Parameters that can be passed:
+- pdf_url: URL of the PDF file to display (required)
+- container_id: ID of the canvas container (default: 'pdf-viewer')
+- controls_id: ID of the controls container (default: 'pdf-controls')
+- initial_scale: Initial zoom scale (default: 1.0)
+- initial_page: Initial page number (default: 1)
+- enable_web_gl: Enable WebGL rendering (default: true)
+- show_loading: Show loading message while rendering (default: true)
+- custom_controls: Show PDF controls (default: true)
+{% endcomment %}
+
+<script>
+    (function() {
+      // Validate PDF.js is loaded
+      if (typeof pdfjsLib === 'undefined') {
+        console.error('PDF.js library is not loaded');
+        return;
+      }
+
+      // Initialize default parameters with proper URL validation
+      const containerId = '{{ container_id|default:"pdf-viewer" }}';
+      const controlsId = '{{ controls_id|default:"pdf-controls" }}';
+      
+      // Get PDF URL safely
+      const pdfUrl = '{{ pdf_url|escapejs|default:"" }}';
+      console.log('PDF URL from template:', pdfUrl);
+      
+      let scale = {{ initial_scale|default:1.0 }};
+      let pageNum = {{ initial_page|default:1 }};
+
+      // Skip initialization if no PDF URL or container
+      if (!pdfUrl || pdfUrl === 'None' || pdfUrl === '' || pdfUrl === 'null') {
+        console.warn('PDF viewer: No valid PDF URL provided:', pdfUrl);
+        return;
+      }
+
+      const canvas = document.getElementById(containerId);
+      if (!canvas) {
+        console.error('PDF viewer: Canvas element not found: ' + containerId);
+        return;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error('PDF viewer: Unable to get 2D context from canvas');
+        return;
+      }
+
+      // Initialize PDF.js worker
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      // Core variables
+      let pdfDoc = null;
+      let pageRendering = false;
+      let pageNumPending = null;
+
+      // Show loading state
+      function showLoading() {
+        canvas.width = 800;
+        canvas.height = 600;
+        ctx.fillStyle = '#f8f9fa';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#6c757d';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loading PDF...', canvas.width / 2, canvas.height / 2);
+      }
+
+      // Show error state
+      function showError(message) {
+        const container = canvas.parentElement;
+        if (container) {
+          container.innerHTML = `
+            <div class="no-pdf-message d-flex flex-column align-items-center justify-content-center h-100">
+              <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+              <h4 class="text-danger">Error Loading PDF</h4>
+              <p class="text-muted">${message}</p>
+              <p class="small text-muted">Please try refreshing the page. If the problem persists, contact support.</p>
+              <details class="mt-2">
+                <summary class="btn btn-sm btn-outline-secondary">Technical Details</summary>
+                <div class="mt-2 text-start">
+                  <small class="text-muted">URL: ${pdfUrl}</small>
+                </div>
+              </details>
+            </div>
+          `;
+        }
+      }
+
+      // Initialize PDF document
+      {% if show_loading|default:True %}
+      showLoading();
+      {% endif %}
+
+      console.log('Attempting to load PDF from URL:', pdfUrl);
+
+      const loadingTask = pdfjsLib.getDocument({
+        url: pdfUrl,
+        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdfjs-dist/3.11.174/cmaps/',
+        cMapPacked: true,
+        withCredentials: true,
+        httpHeaders: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      loadingTask.promise
+        .then(function(pdfDoc_) {
+          pdfDoc = pdfDoc_;
+          console.log('PDF loaded successfully, pages:', pdfDoc.numPages);
+          
+          const pageCountEl = document.getElementById('page_count');
+          if (pageCountEl) {
+            pageCountEl.textContent = pdfDoc.numPages;
+          }
+          renderPage(pageNum);
+        })
+        .catch(function(error) {
+          console.error('Error loading PDF:', error);
+          let errorMessage = 'Failed to load the PDF file.';
+          
+          if (error.name === 'InvalidPDFException') {
+            errorMessage = 'The file is not a valid PDF document.';
+          } else if (error.name === 'MissingPDFException') {
+            errorMessage = 'PDF file not found or expired.';
+          } else if (error.name === 'UnexpectedResponseException') {
+            errorMessage = 'Network error loading PDF. Please check your connection.';
+          } else if (error.message && error.message.includes('CORS')) {
+            errorMessage = 'CORS error: Unable to access PDF file.';
+          } else if (error.message && error.message.includes('403')) {
+            errorMessage = 'Access denied: PDF file not accessible.';
+          } else if (error.message && error.message.includes('404')) {
+            errorMessage = 'PDF file not found.';
+          }
+          
+          showError(errorMessage);
+        });
+
+      function renderPage(num) {
+        if (!pdfDoc) {
+          console.error('PDF document not loaded');
+          return;
+        }
+
+        pageRendering = true;
+
+        {% if show_loading|default:True %}
+        // Only show loading for subsequent renders, not initial
+        if (pageNum !== {{ initial_page|default:1 }}) {
+          showLoading();
+        }
+        {% endif %}
+
+        pdfDoc.getPage(num).then(function(page) {
+          const viewport = page.getViewport({scale: scale});
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport,
+            {% if enable_web_gl|default:True %}
+            enableWebGL: true
+            {% endif %}
+          };
+
+          const renderTask = page.render(renderContext);
+
+          renderTask.promise.then(function() {
+            pageRendering = false;
+            if (pageNumPending !== null) {
+              renderPage(pageNumPending);
+              pageNumPending = null;
+            }
+          }).catch(function(error) {
+            console.error('Error rendering page:', error);
+            pageRendering = false;
+            showError('Error rendering PDF page: ' + error.message);
+          });
+        }).catch(function(error) {
+          console.error('Error getting page:', error);
+          pageRendering = false;
+          showError('Error accessing PDF page: ' + error.message);
+        });
+
+        const pageNumEl = document.getElementById('page_num');
+        if (pageNumEl) {
+          pageNumEl.textContent = num;
+        }
+      }
+
+      function queueRenderPage(num) {
+        if (pageRendering) {
+          pageNumPending = num;
+        } else {
+          renderPage(num);
+        }
+      }
+
+      {% if custom_controls|default:True %}
+      // Add event listeners for controls if they exist
+      const prevBtn = document.getElementById('prev');
+      const nextBtn = document.getElementById('next');
+      const zoomInBtn = document.getElementById('zoom-in');
+      const zoomOutBtn = document.getElementById('zoom-out');
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+          if (pageNum <= 1) return;
+          pageNum--;
+          queueRenderPage(pageNum);
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+          if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
+          pageNum++;
+          queueRenderPage(pageNum);
+        });
+      }
+
+      if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', function() {
+          scale *= 1.2;
+          renderPage(pageNum);
+        });
+      }
+
+      if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', function() {
+          scale /= 1.2;
+          renderPage(pageNum);
+        });
+      }
+      {% endif %}
+
+      // Handle window resize
+      let resizeTimeout;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+          if (pdfDoc) {
+            renderPage(pageNum);
+          }
+        }, 100);
+      });
+    })();
+  </script>

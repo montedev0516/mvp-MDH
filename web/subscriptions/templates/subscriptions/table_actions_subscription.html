@@ -1,0 +1,5 @@
+{# subscriptions/table_actions_subscription.html #}
+<div class="btn-group">
+  <a href="{% url 'subscriptions:tenant_usage_detail' record.tenant.id %}" class="btn btn-sm btn-outline-info">Usage Details</a>
+  <a href="{% url 'subscriptions:tenant_subscription_update' record.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+</div>

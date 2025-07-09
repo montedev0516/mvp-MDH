@@ -1,0 +1,96 @@
+[project]
+name = "web"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.35.57",
+    "celery>=5.4.0",
+    "crispy-bootstrap5>=2024.10",
+    "django-bootstrap5>=24.3",
+    "django-celery-results>=2.5.1",
+    "django-crispy-forms>=2.3",
+    "django-htmx>=1.21.0",
+    "django-tables2>=2.7.0",
+    "django-widget-tweaks>=1.5.0",
+    "django>=5.1.2",
+    "flower>=2.0.1",
+    "gunicorn>=23.0.0",
+    "numpy>=2.1.3",
+    "openai>=1.54.3",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "pre-commit>=4.0.1",
+    "psycopg>=3.1.18",
+    "pydantic>=2.9.2",
+    "pypdf2>=3.0.1",
+    "python-dateutil>=2.9.0.post0",
+    "python-decouple>=3.8",
+    "python-magic>=0.4.27",
+    "pytz>=2024.2",
+    "redis>=5.2.0",
+    "unipath>=1.1",
+    "weasyprint>=63.0",
+    "whitenoise>=6.8.2",
+    "plotly>=5.24.1,<6.0.0",
+    "django-debug-toolbar>=4.4.6",
+    "django-filter>=24.3",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "bandit>=1.8.0",
+    "flower>=2.0.1",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.11",
+    "pre-commit>=4.0.1",
+    "ruff>=0.7.3",
+    "safety>=3.2.14",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+tests = ["B201", "B301"]
+skips = ["B101", "B601"]
+
+[tool.bandit.any_other_function_with_shell_equals_true]
+no_shell = [
+  "os.execl",
+  "os.execle",
+  "os.execlp",
+  "os.execlpe",
+  "os.execv",
+  "os.execve",
+  "os.execvp",
+  "os.execvpe",
+  "os.spawnl",
+  "os.spawnle",
+  "os.spawnlp",
+  "os.spawnlpe",
+  "os.spawnv",
+  "os.spawnve",
+  "os.spawnvp",
+  "os.spawnvpe",
+  "os.startfile"
+]
+shell = [
+  "os.system",
+  "os.popen",
+  "os.popen2",
+  "os.popen3",
+  "os.popen4",
+  "popen2.popen2",
+  "popen2.popen3",
+  "popen2.popen4",
+  "popen2.Popen3",
+  "popen2.Popen4",
+  "commands.getoutput",
+  "commands.getstatusoutput"
+]
+subprocess = [
+  "subprocess.Popen",
+  "subprocess.call",
+  "subprocess.check_call",
+  "subprocess.check_output"
+]

@@ -1,0 +1,58 @@
+{# templates/user_management/base_wizard.html #}
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block style %}
+  {# Add this CSS to your static files #}
+  <style>
+    .wizard-progress .progress {
+      height: 4px;
+    }
+
+    .wizard-steps .step {
+      position: relative;
+      padding-top: 20px;
+    }
+
+    .wizard-steps .step::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      background-color: #dee2e6;
+      border-radius: 50%;
+    }
+
+    .wizard-steps .step.active::before {
+      background-color: #0d6efd;
+    }
+  </style>
+{% endblock %}
+{% block content %}
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-body">
+            <div class="wizard-progress mb-4">
+              <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: {{ progress }}%"></div>
+              </div>
+              <div class="wizard-steps mt-2 d-flex justify-content-between">
+                <span class="step {% if step >= 1 %}active{% endif %}">Tenant</span>
+                <span class="step {% if step >= 2 %}active{% endif %}">Organization</span>
+                <span class="step {% if step >= 3 %}active{% endif %}">Carrier</span>
+                <span class="step {% if step >= 4 %}active{% endif %}">Users</span>
+              </div>
+            </div>
+            {% block wizard_content %}
+
+            {% endblock %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block extra_head %}
+  {% include 'partials/pdfjs/script.html' %}
+  {% include 'partials/pdfjs/style.html' %}
+  <style>
+    .pdf-container {
+      height: calc(100vh - 250px);
+      min-height: 500px;
+      overflow: auto;
+    }
+
+    #pdf-controls {
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  {% bootstrap_messages %}
+
+  <div class="row mb-4">
+    <div class="col">
+      {% bootstrap_label "Create New Order" label_class="h1" %}
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Form Column -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <form method="post" onsubmit="showLoader()">
+            {% csrf_token %}
+            {% bootstrap_form form layout='floating' %}
+
+            <div class="mt-3">
+              {% bootstrap_button button_type="submit" content="Create Order" button_class="btn-primary me-2" %}
+              {% bootstrap_button button_type="link" content="Cancel" href=cancel_url button_class="btn-secondary" %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- PDF Upload and Preview Column -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body p-0">
+          <!-- File Upload Area -->
+          <div id="upload-section" class="p-4" {% if pdf_url %}style="display: none;"{% endif %}>
+            <form method="post" enctype="multipart/form-data" id="upload-form">
+              {% csrf_token %}
+              {% bootstrap_form upload_form layout='floating' %}
+              {% bootstrap_button button_type="submit" content="Upload & Process" button_class="btn-primary w-100" %}
+            </form>
+          </div>
+
+          <!-- PDF Preview Area -->
+          <div id="preview-section" {% if not pdf_url %}style="display: none;"{% endif %}>
+            {% if pdf_url %}
+              <div id="pdf-controls" class="p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="btn-group">
+                    {% bootstrap_button button_type="button" content="Previous" button_id="prev" button_class="btn-outline-secondary btn-sm" %}
+                    {% bootstrap_button button_type="button" content="Next" button_id="next" button_class="btn-outline-secondary btn-sm" %}
+                  </div>
+                  <span>Page: <span id="page_num"></span> / <span id="page_count"></span></span>
+                  <div class="btn-group">
+                    {% bootstrap_button button_type="button" content="Zoom Out" button_id="zoom-out" button_class="btn-outline-secondary btn-sm" %}
+                    {% bootstrap_button button_type="button" content="Zoom In" button_id="zoom-in" button_class="btn-outline-secondary btn-sm" %}
+                    {% bootstrap_button button_type="button" content="Change File" button_id="change-file" button_class="btn-outline-danger btn-sm" %}
+                  </div>
+                </div>
+              </div>
+              <div class="pdf-container">
+                <canvas id="pdf-viewer"></canvas>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  {% if pdf_url %}
+    {% include 'partials/pdfjs/viewer.html' with
+      pdf_url=pdf_url
+      container_id='pdf-viewer'
+      initial_scale=1.0
+      show_loading=True
+      custom_controls=True
+    %}
+  {% endif %}
+
+  <script>
+    document.getElementById('change-file')?.addEventListener('click', function() {
+      document.getElementById('preview-section').style.display = 'none';
+      document.getElementById('upload-section').style.display = 'block';
+    });
+  </script>
+{% endblock %}

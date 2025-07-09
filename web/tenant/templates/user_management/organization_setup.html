@@ -1,0 +1,14 @@
+{# templates/user_management/organization_setup.html #}
+{% extends 'user_management/base_wizard.html' %}
+
+{% block wizard_content %}
+  <h2 class="card-title mb-4">Organization Setup</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="d-flex justify-content-between">
+      <a href="{% url 'tenant:onboarding' %}" class="btn btn-secondary">Back</a>
+      <button type="submit" class="btn btn-primary">Next</button>
+    </div>
+  </form>
+{% endblock %}

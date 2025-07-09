@@ -1,0 +1,91 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <div class="container mt-4">
+    <!-- Messages/Alerts -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+          role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Upload Driver's License</h5>
+              <div class="btn-group">
+                <a href="{% url 'fleet:driver-list' %}" class="btn btn-outline-secondary">
+                  <i class="fas fa-arrow-left me-1"></i> Back to Drivers
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="post" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+
+              <div class="mb-4">
+                <div class="upload-area p-4 border rounded text-center">
+                  <i class="fas fa-cloud-upload-alt display-4 text-primary mb-3"></i>
+                  <h6 class="mb-2">Upload Driver's License</h6>
+                  <p class="text-muted small mb-4">Upload an image or PDF of the driver's license for automatic information extraction</p>
+                  
+                  <div class="mb-3">
+                    {{ form.license_file|as_crispy_field }}
+                  </div>
+
+                  <div class="small text-muted mt-3">
+                    <p class="mb-1"><i class="fas fa-info-circle me-1"></i> Supported file types: Images (JPG, PNG) and PDF</p>
+                    <p class="mb-0"><i class="fas fa-shield-alt me-1"></i> Files are processed securely and confidentially</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center">
+                <a href="{% url 'fleet:driver-list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-upload me-1"></i> Upload License
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.upload-area {
+  background-color: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  border-color: #6c757d;
+  background-color: #fff;
+}
+
+.fa-cloud-upload-alt {
+  color: #6c757d;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %}

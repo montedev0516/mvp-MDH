@@ -1,0 +1,3 @@
+portal.mydispatchhub.com {
+	reverse_proxy localhost:8000
+}

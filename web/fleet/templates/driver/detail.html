@@ -1,0 +1,362 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+  <div class="container mt-4">
+    <!-- Messages/Alerts -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+          role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Header section with actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Driver Details: {{ driver.get_full_name }}</h2>
+      <div class="btn-group">
+        <a href="{% url 'fleet:driver-update' driver.id %}" class="btn btn-primary">
+          <i class="fas fa-edit me-1"></i> Edit Driver
+        </a>
+        <a href="{% url 'fleet:driver-list' %}" class="btn btn-outline-secondary">
+          <i class="fas fa-arrow-left me-1"></i> Back to List
+        </a>
+      </div>
+    </div>
+
+    <!-- Driver name and status banner -->
+    <div class="card mb-4">
+      <div class="card-body bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="mb-0">{{ driver.first_name }} {{ driver.last_name }}</h2>
+          <span class="badge {% if driver.driveremployment.employment_status == 'active' %}bg-success{% elif driver.driveremployment.employment_status == 'inactive' %}bg-secondary{% elif driver.driveremployment.employment_status == 'on_leave' %}bg-warning{% elif driver.driveremployment.employment_status == 'terminated' %}bg-danger{% else %}bg-warning{% endif %} p-2">
+            {{ driver.driveremployment.employment_status }}
+          </span>
+          <!-- <span class="badge {% if driver.driveremployment.duty_status == 'on_duty' %}bg-success{% elif driver.driveremployment.duty_status == 'available' %}bg-secondary{% else %}bg-warning{% endif %} p-2">
+            {{ driver.driveremployment.duty_status }}
+          </span> -->
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Personal Information -->
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-borderless">
+              <tr>
+                <th style="width: 40%">Name:</th>
+                <td>{{ driver.first_name }} {{ driver.last_name }}</td>
+              </tr>
+              <tr>
+                <th>Employee ID:</th>
+                <td>{{ driver.employee_id|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>Date of Birth:</th>
+                <td>{{ driver.date_of_birth|date:"F d, Y"|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>License Number:</th>
+                <td>{{ driver.license_number|default:'—' }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact Information -->
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-address-book me-2"></i>Contact Information</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-borderless">
+              <tr>
+                <th style="width: 40%">Email:</th>
+                <td>
+                  {% if driver.email %}
+                    <a href="mailto:{{ driver.email }}">{{ driver.email }}</a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Phone:</th>
+                <td>
+                  {% if driver.phone %}
+                    <a href="tel:{{ driver.phone }}">{{ driver.phone }}</a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Emergency Contact:</th>
+                <td>
+                  {% if driver.emergency_contact %}
+                    <pre class="mb-0" style="white-space: pre-wrap;">{{ driver.emergency_contact|default:'—' }}</pre>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Address Information -->
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Address Information</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-borderless">
+              <tr>
+                <th style="width: 40%">Address:</th>
+                <td>{{ driver.address|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>City:</th>
+                <td>{{ driver.city|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>State:</th>
+                <td>{{ driver.state|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>ZIP Code:</th>
+                <td>{{ driver.zip_code|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>Country:</th>
+                <td>{{ driver.country|default:'—' }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Employment Information -->
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Employment Details</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-borderless">
+              <tr>
+                <th style="width: 40%">Carrier:</th>
+                <td>{{ driver.carrier|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>Hire Date:</th>
+                <td>{{ driver.hire_date|date:"F d, Y"|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>Termination Date:</th>
+                <td>{{ driver.termination_date|date:"F d, Y"|default:'—' }}</td>
+              </tr>
+              <tr>
+                <th>Status:</th>
+                <td>
+                  <span class="badge {% if driver.driveremployment.employment_status == 'active' %}bg-success{% elif driver.driveremployment.employment_status == 'inactive' %}bg-secondary{% elif driver.driveremployment.employment_status == 'on_leave' %}bg-warning{% elif driver.driveremployment.employment_status == 'terminated' %}bg-danger{% else %}bg-warning{% endif %}">
+                    {{ driver.driveremployment.employment_status }}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <th>Duty Status:</th>
+                <td>
+                  <span class="badge {% if driver.driveremployment.duty_status == 'on_duty' %}bg-success{% elif driver.driveremployment.duty_status == 'available' %}bg-secondary{% else %}bg-warning{% endif %}">
+                    {{ driver.driveremployment.duty_status }}
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver's License Information -->
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-id-card me-2"></i>Driver's License</h5>
+          </div>
+          <div class="card-body">
+            {% if driver.driver_license %}
+              <table class="table table-borderless">
+                <tr>
+                  <th style="width: 40%">License Number:</th>
+                  <td>{{ driver.driver_license.license_number }}</td>
+                </tr>
+                <tr>
+                  <th>Issue Date:</th>
+                  <td>{{ driver.driver_license.issued_date|date:"F d, Y"|default:'—' }}</td>
+                </tr>
+                <tr>
+                  <th>Expiry Date:</th>
+                  <td>
+                    {{ driver.driver_license.expiry_date|date:"F d, Y" }}
+                    {% if driver.driver_license.expiry_date %}
+                      {% if driver.driver_license.expiry_date < now %}
+                        <span class="badge bg-danger ms-2">Expired</span>
+                      {% else %}
+                        <span class="badge bg-success ms-2">Valid</span>
+                      {% endif %}
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr>
+                  <th>License Type:</th>
+                  <td>{{ driver.driver_license.license_type|default:'—' }}</td>
+                </tr>
+                <tr>
+                  <th>Conditions:</th>
+                  <td>{{ driver.driver_license.conditions|default:'—' }}</td>
+                </tr>
+                <tr>
+                  <th>License Class:</th>
+                  <td>{{ driver.driver_license.license_class|default:'—' }}</td>
+                </tr>
+              </table>
+            {% else %}
+              <div class="text-center py-3">
+                <p class="text-muted mb-3">No driver's license information available</p>
+                <a href="{% url 'fleet:driver-license-upload' %}" class="btn btn-primary">
+                  <i class="fas fa-upload me-1"></i> Upload License
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Assignments -->
+      {% if active_assignments %}
+        <div class="col-md-6 mb-4">
+          <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Current Assignment</h5>
+            </div>
+            <div class="card-body">
+              {% for assignment in active_assignments %}
+                <table class="table table-borderless">
+                  <tr>
+                    <th style="width: 40%">Truck:</th>
+                    <td>
+                      <a href="{% url 'fleet:truck-detail' assignment.truck.id %}">
+                        {{ assignment.truck.unit }} - {{ assignment.truck.make }} {{ assignment.truck.model }}
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Start Date:</th>
+                    <td>{{ assignment.start_date|date:"F d, Y" }}</td>
+                  </tr>
+                  <tr>
+                    <th>End Date:</th>
+                    <td>{{ assignment.end_date|date:"F d, Y" }}</td>
+                  </tr>
+                </table>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Action buttons at bottom -->
+    <div class="d-flex gap-2 mb-4">
+      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDriverModal">
+        <i class="fas fa-trash me-1"></i> Delete Driver
+      </button>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteDriverModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Confirm Deletion</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to delete driver <strong>{{ driver.first_name }} {{ driver.last_name }}</strong>?</p>
+            <p class="text-danger">This action cannot be undone.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form action="{% url 'fleet:driver-delete' driver.id %}" method="post" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const countryField = document.querySelector('#id_country');
+    const zipCodeLabel = document.querySelector('label[for="id_zip_code"]');
+    const zipCodeInput = document.querySelector('#id_zip_code');
+
+    function updateZipCodeLabel() {
+        const country = countryField.value.toLowerCase();
+        if (['canada', 'ca', 'can'].includes(country)) {
+            zipCodeLabel.textContent = 'Postal Code';
+            zipCodeInput.placeholder = 'A1A 1A1';
+        } else {
+            zipCodeLabel.textContent = 'ZIP Code';
+            zipCodeInput.placeholder = '12345';
+        }
+    }
+
+    if (countryField) {
+        countryField.addEventListener('change', updateZipCodeLabel);
+        // Update on page load
+        updateZipCodeLabel();
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+}
+
+.table td {
+  color: #212529;
+}
+</style>
+{% endblock %}

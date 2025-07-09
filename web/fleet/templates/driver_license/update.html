@@ -1,0 +1,102 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <div class="container mt-4">
+    <h2 class="mb-4">Update Driver: {{ driver.first_name }} {{ driver.last_name }}</h2>
+    <form method="post" id="driverForm">
+      {% csrf_token %}
+
+      <div class="row">
+        <!-- Personal Information -->
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Personal Information</h5>
+            </div>
+            <div class="card-body">{{ form.first_name|as_crispy_field }}
+              {{ form.middle_name|as_crispy_field }}
+              {{ form.last_name|as_crispy_field }}</div>
+          </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Contact Information</h5>
+            </div>
+            <div class="card-body">{{ form.email|as_crispy_field }}
+              {{ form.primary_phone_number|as_crispy_field }}
+              {{ form.secondary_phone_number|as_crispy_field }}</div>
+          </div>
+        </div>
+
+        <!-- Address Information -->
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Address</h5>
+            </div>
+            <div class="card-body">{{ form.street|as_crispy_field }}
+              {{ form.city|as_crispy_field }}
+              {{ form.state|as_crispy_field }}
+              {{ form.province|as_crispy_field }}
+              {{ form.zip_code|as_crispy_field }}</div>
+          </div>
+        </div>
+
+        <!-- Employment Information -->
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Employment Details</h5>
+            </div>
+            <div class="card-body">{{ form.company|as_crispy_field }}
+              {{ form.joining_date|as_crispy_field }}
+              {{ form.leave_date|as_crispy_field }}
+              {{ form.still_working|as_crispy_field }}</div>
+          </div>
+        </div>
+
+        <!-- Documents and IDs -->
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Documents & IDs</h5>
+            </div>
+            <div class="card-body">{{ form.sin_number|as_crispy_field }}
+              {{ form.fast_card|as_crispy_field }}
+              {{ form.passport|as_crispy_field }}
+              {{ form.passport_expiry_date|as_crispy_field }}
+              {{ form.citizenship_country|as_crispy_field }}
+              {{ form.issue_country|as_crispy_field }}</div>
+          </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Additional Information</h5>
+            </div>
+            <div class="card-body">{{ form.additional_contact_details|as_crispy_field }}
+              {{ form.drivers_license|as_crispy_field }}
+              {{ form.carrier|as_crispy_field }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Update Driver</button>
+        <a href="{% url 'fleet:driver-detail' driver.id %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    // Your existing JavaScript code here
+  </script>
+{% endblock %}

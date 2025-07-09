@@ -1,0 +1,206 @@
+{% extends 'layout/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- Messages/Alerts -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Assignments</h2>
+    <div class="btn-group">
+      <a href="{% url 'dispatch:assignment-create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Create Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Assignment List -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-light">
+      <form method="get" class="row g-3">
+        <div class="col-md-4">
+          <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search assignments..."
+              value="{{ search_query }}">
+            <button class="btn btn-outline-secondary" type="submit">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            {% for status_value, status_label in status_choices %}
+            <option value="{{ status_value }}" {% if status_value == status_filter %}selected{% endif %}>
+              {{ status_label }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Driver</th>
+              <th>Truck</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for assignment in assignments %}
+              <tr>
+                <td>{{ assignment.driver }}</td>
+                <td>{{ assignment.truck }}</td>
+                <td>{{ assignment.start_date|date:"Y-m-d" }}</td>
+                <td>{{ assignment.end_date|date:"Y-m-d"|default:"Ongoing" }}</td>
+                <td>
+                  <span class="badge {% if assignment.status == 'assigned' %}bg-primary{% elif assignment.status == 'on_duty' %}bg-success{% elif assignment.status == 'off_duty' %}bg-secondary{% else %}bg-danger{% endif %}">
+                    {{ assignment.get_status_display }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group">
+                    <a href="{% url 'dispatch:assignment-detail' assignment.id %}" class="btn btn-sm btn-info">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                    <a href="{% url 'dispatch:assignment-update' assignment.id %}" class="btn btn-sm btn-warning">
+                      <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <button type="button" class="btn btn-sm btn-danger"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteModal{{ assignment.id }}">
+                      <i class="fas fa-trash"></i> Delete
+                    </button>
+                  </div>
+
+                  <!-- Delete Modal for each assignment -->
+                  <div class="modal fade" id="deleteModal{{ assignment.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title">Confirm Delete</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                          Are you sure you want to delete this assignment?
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                          <form action="{% url 'dispatch:assignment-delete' assignment.id %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4">
+                  <div class="text-muted">
+                    <i class="fas fa-inbox fa-2x mb-3"></i>
+                    <p class="mb-0">No assignments found</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+              Previous
+            </a>
+          </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <li class="page-item active">
+              <span class="page-link">{{ num }}</span>
+            </li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                {{ num }}
+              </a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+              Next
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-group {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+}
+
+.table td {
+  color: #212529;
+}
+
+.fa-link {
+  color: #6c757d;
+}
+
+.table a {
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+.table a:hover {
+  text-decoration: underline;
+}
+</style>
+{% endblock %} 

@@ -1,0 +1,156 @@
+services:
+  web:
+    build:
+      context: web
+      dockerfile: Dockerfile
+    container_name: mdh-web
+    volumes:
+      - shared_drive:/app/tmp
+    ports:
+      - "8000:8000"
+    command: "uv run gunicorn mdh.wsgi -w 2 --bind 0.0.0.0:8000"
+    profiles:
+      - prod
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.75"
+          memory: "768M"
+
+  web-dev:
+    build:
+      context: web
+      dockerfile: Dockerfile
+    container_name: mdh-web-dev
+    volumes:
+      - ./web:/app
+      - shared_drive:/app/tmp
+    env_file:
+      - ./web/.env
+    ports:
+      - "8000:8000"
+    command: "uv run python manage.py runserver 0.0.0.0:8000"
+    profiles:
+      - dev
+      - debug
+    depends_on:
+      - db
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "2G"
+        reservations:
+          cpus: "0.75"
+          memory: "1G"
+
+  web-worker:
+    image: mdh-web
+    container_name: mdh-web-worker
+    volumes:
+      - shared_drive:/app/tmp
+    command: "uv run celery -A mdh worker -l info"
+    profiles:
+      - prod
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.75"
+          memory: "768M"
+
+  web-worker-dev:
+    image: mdh-web-dev
+    container_name: mdh-web-worker-dev
+    volumes:
+      - ./web:/app
+      - shared_drive:/app/tmp
+    env_file:
+      - ./web/.env
+    command: "uv run celery -A mdh worker -l debug"
+    profiles:
+      - dev
+      - debug
+    depends_on:
+      - db
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.75"
+          memory: "768M"
+
+  flower:
+    image: mher/flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    profiles:
+      - dev
+      - debug
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
+
+  redis: # Add the Redis service definition
+    image: redis:7.2.4-alpine3.19
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    profiles:
+      - dev
+      - prod
+      - redis
+      - debug
+      - only-dbs
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  db:
+    image: postgres:17.2-alpine3.20
+    container_name: postgres-db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=mdh
+      - POSTGRES_PASSWORD=mdh
+      - POSTGRES_DB=mdh
+    ports:
+      - 5432:5432
+    profiles:
+      - dev
+      - debug
+      - only-dbs
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+volumes:
+  shared_drive:
+  pgdata:
+  redis_data:

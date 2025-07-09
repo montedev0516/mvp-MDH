@@ -1,0 +1,82 @@
+{% extends 'layout/base.html' %}
+{% load django_tables2 %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+  <div class="container-fluid py-4">
+    <h1 class="h3 mb-4">Tenant Subscriptions</h1>
+
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Active Subscriptions</h5>
+            <h2 class="card-text">{{ active_count }}</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Expiring Soon</h5>
+            <h2 class="card-text text-warning">{{ expiring_soon }}</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="get" class="mb-4">
+          <div class="row g-3">
+            <div class="col-md-3">{{ filter.form.tenant.label_tag }}
+              {{ filter.form.tenant }}</div>
+            <div class="col-md-3">{{ filter.form.plan.label_tag }}
+              {{ filter.form.plan }}</div>
+            <div class="col-md-3">{{ filter.form.status.label_tag }}
+              {{ filter.form.status }}</div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-2"></i>Apply Filters</button>
+            </div>
+          </div>
+        </form>
+        {% render_table table %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    /* Light mode styles */
+    [data-bs-theme='light'] .table {
+      color: #212529;
+    }
+    [data-bs-theme='light'] label {
+      color: #495057;
+    }
+
+    /* Dark mode styles */
+    [data-bs-theme='dark'] .table {
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] .table-striped > tbody > tr:nth-of-type(odd) > * {
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] label {
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] .form-control,
+    [data-bs-theme='dark'] .form-select {
+      background-color: #2b3035;
+      border-color: #495057;
+      color: #e9ecef;
+    }
+    [data-bs-theme='dark'] .form-control:focus,
+    [data-bs-theme='dark'] .form-select:focus {
+      background-color: #2b3035;
+      border-color: #0d6efd;
+      color: #e9ecef;
+    }
+  </style>
+{% endblock %}

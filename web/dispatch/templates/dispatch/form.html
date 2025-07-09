@@ -1,0 +1,277 @@
+{% extends 'layout/base.html' %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <div>
+        <h1 class="h3 mb-1">{% if object %}Update{% else %}Create{% endif %} Dispatch</h1>
+        {% if object %}
+          <p class="text-muted mb-0">Order #{{ object.order_number }}</p>
+        {% endif %}
+      </div>
+      {% if object %}
+        {% include 'partials/status_badge.html' with 
+          status_color=object.status_color 
+          status_text=object.get_status_display 
+        %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Main Form Section -->
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          {% include 'partials/form_base.html' with form_id="dispatch-form" %}
+          {% block form_content %}
+            {% include 'partials/section_header.html' with title="Basic Details" icon="info-circle" %}
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ form.order_number|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.order_date|as_crispy_field }}
+              </div>
+            </div>
+            {{ form.customer|as_crispy_field }}
+            {{ form.trip|as_crispy_field }}
+
+            {% include 'partials/section_header.html' with title="Assignment Details" icon="truck" %}
+            
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ form.driver|as_crispy_field }}
+              </div>
+              <div class="col-md-6">
+                {{ form.truck|as_crispy_field }}
+              </div>
+            </div>
+            {{ form.carrier|as_crispy_field }}
+
+            {% include 'partials/section_header.html' with title="Financial Details" icon="dollar-sign" %}
+            
+            <div class="row g-3">
+              <div class="col-md-4">
+                {{ form.commission_amount|as_crispy_field }}
+              </div>
+              <div class="col-md-4">
+                {{ form.commission_percentage|as_crispy_field }}
+              </div>
+              <div class="col-md-4">
+                {{ form.commission_currency|as_crispy_field }}
+              </div>
+            </div>
+
+            {% include 'partials/section_header.html' with title="Status & Notes" icon="clipboard-list" %}
+            
+            {% if object.status == 'Cancelled' or object.status == 'Invoiced' %}
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <input type="text" class="form-control" value="{{ object.get_status_display }}" readonly>
+                <input type="hidden" name="status" value="{{ object.status }}">
+              </div>
+            {% else %}
+              {{ form.status|as_crispy_field }}
+            {% endif %}
+
+            {{ form.notes|as_crispy_field }}
+          {% endblock %}
+        </div>
+      </div>
+
+      {% if object %}
+        <!-- History Section -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            {% include 'partials/section_header.html' with title="History" icon="history" %}
+            
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Created At</dt>
+              <dd class="col-sm-8">{{ object.created_at|date:'F j, Y H:i' }}</dd>
+              
+              <dt class="col-sm-4">Last Updated</dt>
+              <dd class="col-sm-8">{{ object.updated_at|date:'F j, Y H:i' }}</dd>
+              
+              <dt class="col-sm-4">Current Status</dt>
+              <dd class="col-sm-8">
+                {% include 'partials/status_badge.html' with 
+                  status_color=object.status_color 
+                  status_text=object.get_status_display 
+                %}
+              </dd>
+            </dl>
+          </div>
+        </div>
+
+        {% if logs %}
+          <!-- Activity Logs -->
+          <div class="card shadow-sm mt-4">
+            <div class="card-body">
+              {% include 'partials/section_header.html' with title="Recent Activity" icon="list" %}
+              
+              <ul class="list-group">
+                {% for log in logs %}
+                  <li class="list-group-item">
+                    {{ log.created_at|date:"Y-m-d H:i" }} - {{ log.message }}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- PDF Section -->
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Order Document</h5>
+        </div>
+        <div class="card-body p-0">
+          {% include 'partials/pdf_viewer.html' with 
+            pdf_url=pdf_url 
+            container_id='dispatch-pdf-viewer'
+            no_pdf_message='No PDF file is associated with this dispatch.'
+          %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('dispatch-form');
+    const tripSelect = document.getElementById('id_trip');
+    const driverSelect = document.getElementById('id_driver');
+    const truckSelect = document.getElementById('id_truck');
+    const carrierSelect = document.getElementById('id_carrier');
+    const commissionPercentageInput = document.getElementById('id_commission_percentage');
+    const commissionAmountInput = document.getElementById('id_commission_amount');
+    const loadTotal = parseFloat("{{ load_total|default:'0'|stringformat:'f' }}");
+
+    function calculateCommission() {
+      if (commissionPercentageInput && commissionAmountInput && loadTotal > 0) {
+        const percentage = parseFloat(commissionPercentageInput.value) || 0;
+        const calculatedAmount = (loadTotal * percentage / 100).toFixed(2);
+        commissionAmountInput.value = calculatedAmount;
+      }
+    }
+
+    // Add event listeners for commission percentage changes
+    if (commissionPercentageInput && !commissionPercentageInput.disabled) {
+      ['input', 'change', 'keyup'].forEach(event => {
+        commissionPercentageInput.addEventListener(event, calculateCommission);
+      });
+      
+      // Set initial values if empty
+      if (!commissionPercentageInput.value) {
+        commissionPercentageInput.value = "10.0";
+      }
+
+      // Calculate initial value
+      calculateCommission();
+    }
+
+    // Function to update available assignments
+    async function updateAvailableAssignments(tripId) {
+      try {
+        // Clear current options
+        driverSelect.innerHTML = '<option value="">---------</option>';
+        truckSelect.innerHTML = '<option value="">---------</option>';
+        carrierSelect.innerHTML = '<option value="">---------</option>';
+
+        if (!tripId) return;
+
+        const response = await fetch(`/dispatch/api/dispatch/available-assignments/?trip_id=${tripId}`);
+        if (!response.ok) throw new Error('Failed to fetch available assignments');
+        
+        const data = await response.json();
+        
+        // Update driver options
+        if (data.drivers && Array.isArray(data.drivers)) {
+          data.drivers.forEach(driver => {
+            const option = new Option(`${driver.first_name} ${driver.last_name}`, driver.id);
+            driverSelect.add(option);
+          });
+        }
+
+        // Update truck options
+        if (data.trucks && Array.isArray(data.trucks)) {
+          data.trucks.forEach(truck => {
+            const option = new Option(`${truck.unit} - ${truck.make}`, truck.id);
+            truckSelect.add(option);
+          });
+        }
+
+        // Update carrier options
+        if (data.carriers && Array.isArray(data.carriers)) {
+          data.carriers.forEach(carrier => {
+            const option = new Option(carrier.name, carrier.id);
+            carrierSelect.add(option);
+          });
+        }
+
+        // Update help text
+        updateHelpText(driverSelect, data.drivers.length, 'driver');
+        updateHelpText(truckSelect, data.trucks.length, 'truck');
+        updateHelpText(carrierSelect, data.carriers.length, 'carrier');
+      } catch (error) {
+        console.error('Error fetching available assignments:', error);
+        showError('Failed to fetch available assignments. Please try again.');
+      }
+    }
+
+    function updateHelpText(select, count, type) {
+      const helpText = select.parentNode.querySelector('.form-text');
+      if (helpText) {
+        helpText.textContent = count === 0 ? 
+          `No ${type}s available for this time period` : 
+          `${count} available ${type}(s)`;
+      }
+    }
+
+    function showError(message) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+      errorDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      form.insertBefore(errorDiv, form.firstChild);
+    }
+
+    // Add event listener for trip selection change
+    if (tripSelect) {
+      tripSelect.addEventListener('change', function() {
+        const existingErrors = tripSelect.parentNode.querySelectorAll('.alert-danger');
+        existingErrors.forEach(error => error.remove());
+        
+        updateAvailableAssignments(this.value);
+      });
+
+      // Initial load if trip is pre-selected
+      if (tripSelect.value) {
+        updateAvailableAssignments(tripSelect.value);
+      }
+    }
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+  });
+</script>
+{% endblock %} 
