@@ -1,9 +1,18 @@
-# MDH For Supply Chain
+# MDH For Supply Chain (MVP)
 
-**MDH** is an AI-powered, cloud-based transportation management platform that seamlessly integrates with supply chain operations to provide end-to-end visibility, control, and optimization of logistics processes.
-**MDH** is an AI-powered SaaS application designed for comprehensive dispatch management in the transportation industry. The system provides end-to-end fleet management, dispatch coordination, expense tracking, and financial reporting capabilities.
+- **MDH** is an AI-powered, cloud-based transportation management platform that seamlessly integrates with supply chain operations to provide end-to-end visibility, control, and optimization of logistics processes.
+- **MDH** is an AI-powered SaaS application designed for comprehensive dispatch management in the transportation industry. The system provides end-to-end fleet management, dispatch coordination, expense tracking, and financial reporting capabilities.
 
-- Python 3.12+
+### **Overview**
+- **Platform**: SaaS-based transportation management system
+- **Architecture**: Multi-tenant, cloud-native with real-time capabilities
+- **Technology Stack**: Django, PostgreSQL, Redis, OpenAI model, AI/ML integration, AWS, Docker, Celery
+- **Deployment**: AWS cloud infrastructure with containerization
+- **Security**: Enterprise-grade with role-based access control
+
+### **Mission & Vision**
+**Mission**: Transform transportation management into a comprehensive supply chain solution
+**Vision**: Become the leading integrated platform for transportation and supply chain operations
 
 ## System Architecture
 
