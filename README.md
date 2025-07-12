@@ -64,7 +64,7 @@
 
 ---
   
-## For ground zero pre-requisite instructions [click here](https://github.com/montedev0516/mvp-MDH/)
+## For ground zero pre-requisite instructions [click here](https://github.com/montedev0516/mvp-MDH/blob/main/MDH_Introduction.md)
 
 ### Setup
 
