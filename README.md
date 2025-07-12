@@ -11,8 +11,8 @@
 - **Security**: Enterprise-grade with role-based access control
 
 ### **Mission & Vision**
-**Mission**: Transform transportation management into a comprehensive supply chain solution
-**Vision**: Become the leading integrated platform for transportation and supply chain operations
+- **Mission**: Transform transportation management into a comprehensive supply chain solution
+- **Vision**: Become the leading integrated platform for transportation and supply chain operations
 
 ## System Architecture
 
