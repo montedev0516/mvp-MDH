@@ -1,15 +1,75 @@
-# MDH a.k.a MyDispatchHub.com
+# MDH For Supply Chain
 
-An AI powered SaaS Application for Dispatch management.
+**MDH** is an AI-powered, cloud-based transportation management platform that seamlessly integrates with supply chain operations to provide end-to-end visibility, control, and optimization of logistics processes.
+**MDH** is an AI-powered SaaS application designed for comprehensive dispatch management in the transportation industry. The system provides end-to-end fleet management, dispatch coordination, expense tracking, and financial reporting capabilities.
 
 - Python 3.12+
+
+## System Architecture
+
+### High-Level Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Load Balancer │    │   Web Servers   │    │   Background    │
+│    (Caddy)      │────│    (Django)     │────│   Workers       │
+│                 │    │                 │    │   (Celery)      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │                       │
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │   Database      │    │     Cache       │
+                       │ (PostgreSQL)    │    │    (Redis)      │
+                       └─────────────────┘    └─────────────────┘
+```
+
+## Technology Stack
+
+### Backend Framework
+- **Django 5.1.2**: Main web framework
+- **Python 3.12+**: Programming language
+- **PostgreSQL**: Primary database (with SQLite fallback for development)
+- **Redis**: Caching and session storage
+
+### Asynchronous Processing
+- **Celery**: Background task processing
+- **Celery Beat**: Scheduled task management
+- **Flower**: Celery monitoring interface
+
+### Frontend Technologies
+- **Django Templates**: Server-side rendering
+- **Bootstrap 5**: CSS framework for responsive design
+- **HTMX**: Dynamic frontend interactions without JavaScript frameworks
+- **Crispy Forms**: Enhanced form rendering
+- **Django Tables2**: Advanced table rendering with sorting/filtering
+
+### Infrastructure & Deployment
+- **Docker & Docker Compose**: Containerization
+- **Gunicorn**: WSGI server for production
+- **WhiteNoise**: Static file serving
+- **Caddy**: Reverse proxy and SSL termination
+- **AWS Services**: Cloud deployment platform
+
+### Development Tools
+- **UV**: Fast Python package manager
+- **Pre-commit**: Code quality hooks
+- **Ruff**: Python linting and formatting
+- **Safety & Bandit**: Security scanning
+- **Debug Toolbar**: Development debugging
+
+### Third-Party Integrations
+- **OpenAI API**: AI-powered document processing
+- **AWS S3**: File storage
+- **Plotly**: Data visualization
+- **WeasyPrint**: PDF generation
+
+---
   
-## For ground zero pre-requisite instructions [click here](https://github.com/nikhilakki/mdh/blob/df7d717f091e697ce304501d40ef1a60d3daab75/How-to-Setup.md#L1)
+## For ground zero pre-requisite instructions [click here](https://github.com/montedev0516/mvp-MDH/)
 
 ### Setup
 
 ```bash
-git clone git@github.com:nikhilakki/mdh.git && cd mdh
+git clone git@github.com:montedev0516/mvp-MDH.git && cd mvp-MDH
 pip install -U uv
 cd web && uv sync --frozen
 cd ../ && uv run pre-commit install
@@ -24,6 +84,6 @@ make dev-migrate dev-createsuperuser # first time setup
 make dev-logs-web
 ```
 
-> Author - [Nikhil Akki](https://nikhilakki.in/about)
+> Author - [James Haruki](https://x.com/JamesTX0108, https://t.me/alpha_T0108, jamesharuki0516@gmail.com)
 
-### Made in 🇮🇳 & 🇨🇦 for a better 🌎
+### Made in JP for a better 🌎
