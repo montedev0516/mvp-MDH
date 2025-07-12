@@ -14,6 +14,12 @@
 - **Mission**: Transform transportation management into a comprehensive supply chain solution
 - **Vision**: Become the leading integrated platform for transportation and supply chain operations
 
+### **Video***
+- https://drive.google.com/file/d/1HqXoI6p0ULSP1uq7pFQa7g0UGXLZB3rg/view
+- https://drive.google.com/file/d/14Ml1j1oRw2uKIXEo4pVndfKIN0Hvyqs2/view
+- https://drive.google.com/file/d/1Z2pvYoZO4PV3nevUKv5d33Eb2d1lod5r/view
+- https://drive.google.com/file/d/1ODE5ADxzIMc7cxiSnou8FAcyD1T3aTpw/view
+
 ## System Architecture
 
 ### High-Level Architecture
