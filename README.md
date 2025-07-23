@@ -99,6 +99,6 @@ make dev-migrate dev-createsuperuser # first time setup
 make dev-logs-web
 ```
 
-> Author - [James Haruki](https://x.com/JamesTX0108, https://t.me/alpha_T0108, jamesharuki0516@gmail.com)
+> Author - montecristodev2025@gmail.com
 
 ### Made in JP for a better 🌎
