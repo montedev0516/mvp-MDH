@@ -99,6 +99,6 @@ make dev-migrate dev-createsuperuser # first time setup
 make dev-logs-web
 ```
 
-> Author - montecristodev2025@gmail.com
+> Author - montedev
 
 ### Made in montedev for a better 🌎
